@@ -1,0 +1,29 @@
+{
+    "name": "luiscoutinh/fiscal-identifiers",
+    "description": "Worldwide fiscal identifier validation for PHP, with normalization, country-specific rules, checksums, external verification providers, and configurable acceptance and output policies.",
+    "type": "library",
+    "require": {
+        "php": "^8.3",
+        "symfony/intl": "^7.3 || ^8.0"
+    },
+    "require-dev": {
+        "pestphp/pest": "^3.8",
+        "phpstan/phpstan": "^2.1"
+    },
+    "autoload": {
+        "psr-4": {
+            "LuisCoutinho\\FiscalIdentifiers\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "LuisCoutinho\\FiscalIdentifiers\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "pest",
+        "analyse": "phpstan analyse src tests --level=max"
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}
