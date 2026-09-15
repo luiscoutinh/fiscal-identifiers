@@ -25,6 +25,11 @@
         "test": "pest",
         "analyse": "phpstan analyse src tests --level=max"
     },
+    "config": {
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    },
     "minimum-stability": "stable",
     "prefer-stable": true
 }
