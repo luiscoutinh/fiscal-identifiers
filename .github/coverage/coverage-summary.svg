@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="620" height="132" role="img" aria-label="Code coverage summary pending">
+  <rect x="0.5" y="0.5" width="619" height="131" rx="8" fill="#0d1117" stroke="#30363d"/>
+  <text x="24" y="30" fill="#f0f6fc" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif" font-size="18" font-weight="600">Code coverage</text>
+  <text x="24" y="56" fill="#8c959f" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif" font-size="12">Awaiting the first successful main-branch measurement</text>
+  <text x="24" y="96" fill="#8c959f" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif" font-size="13">The CI coverage job will publish line, method and class metrics automatically.</text>
+</svg>
