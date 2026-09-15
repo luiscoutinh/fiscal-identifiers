@@ -1,0 +1,90 @@
+name: Coverage presentation
+
+on:
+  workflow_run:
+    workflows:
+      - CI
+    types:
+      - completed
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  publish:
+    name: Publish coverage badge and summary
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.head_repository.full_name == github.repository &&
+      (github.event.workflow_run.event == 'push' || github.event.workflow_run.event == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout trusted main branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Ensure this is still the latest main run
+        id: freshness
+        env:
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "$(git rev-parse HEAD)" == "$HEAD_SHA" ]]; then
+            echo "current=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "main advanced after this CI run; a newer run will publish coverage."
+            echo "current=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Download coverage artifact
+        if: steps.freshness.outputs.current == 'true'
+        id: artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          artifact_name="coverage-${HEAD_SHA}"
+          mkdir -p /tmp/coverage
+
+          if gh run download "$RUN_ID" \
+            --repo "$GITHUB_REPOSITORY" \
+            --name "$artifact_name" \
+            --dir /tmp/coverage; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No coverage artifact named $artifact_name; nothing to publish."
+            echo "available=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Render coverage presentation
+        if: steps.artifact.outputs.available == 'true'
+        run: python3 .github/scripts/render-coverage.py /tmp/coverage/clover.xml .github/coverage
+
+      - name: Publish coverage assets to main
+        if: steps.artifact.outputs.available == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git add .github/coverage/coverage.svg .github/coverage/coverage-summary.svg .github/coverage/coverage.json
+
+          if git diff --cached --quiet; then
+            echo "Coverage presentation is already current."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore: update coverage presentation [skip ci]"
+          git push origin HEAD:main
