@@ -13,7 +13,8 @@ final readonly class ValidationConfiguration
     public function __construct(
         private array $providers = [],
         private array $countryExternalValidation = [],
-    ) {}
+    ) {
+    }
 
     public function isProviderEnabled(string $provider): bool
     {

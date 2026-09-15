@@ -20,7 +20,8 @@ final readonly class FiscalIdentifierValidator
         private CountryRegistry $countries,
         private ProviderRegistry $providers,
         private ValidationConfiguration $configuration = new ValidationConfiguration(),
-    ) {}
+    ) {
+    }
 
     public function validate(string $countryCode, string $value, IdentifierType $type = IdentifierType::Vat): ValidationResult
     {

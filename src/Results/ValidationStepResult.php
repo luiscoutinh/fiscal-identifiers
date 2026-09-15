@@ -11,5 +11,6 @@ final readonly class ValidationStepResult
     public function __construct(
         public ValidationStatus $status,
         public ?string $message = null,
-    ) {}
+    ) {
+    }
 }

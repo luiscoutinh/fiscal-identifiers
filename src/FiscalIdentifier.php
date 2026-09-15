@@ -12,5 +12,6 @@ final readonly class FiscalIdentifier
         public string $countryCode,
         public IdentifierType $type,
         public string $value,
-    ) {}
+    ) {
+    }
 }

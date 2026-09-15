@@ -19,7 +19,6 @@ use FiscalIdentifiers\Registry\CountryRegistry;
 use FiscalIdentifiers\Registry\ProviderRegistry;
 use FiscalIdentifiers\Results\ExternalVerificationResult;
 use FiscalIdentifiers\Validation\RegexValidator;
-use InvalidArgumentException;
 
 function portugalValidator(?ValidationConfiguration $configuration = null, ?ProviderRegistry $providers = null): FiscalIdentifierValidator
 {
@@ -67,7 +66,7 @@ test('supports country and provider external validation overrides', function ():
 
 test('uses registered external providers and keeps verification distinct from acceptance', function (): void {
     $providers = new ProviderRegistry();
-    $providers->register(new class implements ExternalVerificationProvider {
+    $providers->register(new class () implements ExternalVerificationProvider {
         public function key(): string
         {
             return 'vies';
@@ -90,7 +89,7 @@ test('uses registered external providers and keeps verification distinct from ac
         ->and($result->toArray()['steps']['external']['message'])->toBe('verified');
 
     $failedProviders = new ProviderRegistry();
-    $failedProviders->register(new class implements ExternalVerificationProvider {
+    $failedProviders->register(new class () implements ExternalVerificationProvider {
         public function key(): string
         {
             return 'vies';
@@ -119,13 +118,13 @@ test('supports definitions without checksum or external providers', function ():
     $countries->register(new CountryDefinition('US', [
         IdentifierType::BusinessTax->value => new IdentifierDefinition(
             IdentifierType::BusinessTax,
-            new class implements Normalizer {
+            new class () implements Normalizer {
                 public function normalize(string $value): string
                 {
                     return trim($value);
                 }
             },
-            new class implements LocalValidator {
+            new class () implements LocalValidator {
                 public function validate(string $value): bool
                 {
                     return $value === '123';
@@ -151,6 +150,6 @@ test('validates supporting building blocks and invalid country definitions', fun
         ->and($checksum->validate('501964843'))->toBeTrue()
         ->and($regex->validate('123'))->toBeTrue()
         ->and($regex->validate('abc'))->toBeFalse()
-        ->and(fn () => new RegexValidator('/[/'))->toThrow(InvalidArgumentException::class)
-        ->and(fn () => new CountryDefinition('XX', []))->toThrow(InvalidArgumentException::class);
+        ->and(fn () => new RegexValidator('/[/'))->toThrow(\InvalidArgumentException::class)
+        ->and(fn () => new CountryDefinition('XX', []))->toThrow(\InvalidArgumentException::class);
 });

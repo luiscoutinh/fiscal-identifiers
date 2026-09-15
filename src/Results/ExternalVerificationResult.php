@@ -13,5 +13,6 @@ final readonly class ExternalVerificationResult
         public ValidationStatus $status,
         public array $metadata = [],
         public ?string $message = null,
-    ) {}
+    ) {
+    }
 }

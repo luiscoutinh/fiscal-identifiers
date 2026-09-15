@@ -16,7 +16,8 @@ final readonly class ValidationResult
         public string $normalized,
         public ValidationDecision $decision,
         public array $steps,
-    ) {}
+    ) {
+    }
 
     public function isAccepted(): bool
     {
