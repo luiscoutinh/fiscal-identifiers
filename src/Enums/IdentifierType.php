@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace LuisCoutinho\FiscalIdentifiers\Enums;
+namespace FiscalIdentifiers\Enums;
 
 enum IdentifierType: string
 {

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace LuisCoutinho\FiscalIdentifiers\Registry;
+namespace FiscalIdentifiers\Registry;
 
-use LuisCoutinho\FiscalIdentifiers\Contracts\ExternalVerificationProvider;
+use FiscalIdentifiers\Contracts\ExternalVerificationProvider;
 
 final class ProviderRegistry
 {

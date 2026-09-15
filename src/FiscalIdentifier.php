@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace LuisCoutinho\FiscalIdentifiers;
+namespace FiscalIdentifiers;
 
-use LuisCoutinho\FiscalIdentifiers\Enums\IdentifierType;
+use FiscalIdentifiers\Enums\IdentifierType;
 
 final readonly class FiscalIdentifier
 {

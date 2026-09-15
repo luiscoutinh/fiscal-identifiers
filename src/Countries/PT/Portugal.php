@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace LuisCoutinho\FiscalIdentifiers\Countries\PT;
+namespace FiscalIdentifiers\Countries\PT;
 
-use LuisCoutinho\FiscalIdentifiers\Definitions\CountryDefinition;
-use LuisCoutinho\FiscalIdentifiers\Definitions\IdentifierDefinition;
-use LuisCoutinho\FiscalIdentifiers\Enums\IdentifierType;
-use LuisCoutinho\FiscalIdentifiers\Validation\RegexValidator;
+use FiscalIdentifiers\Definitions\CountryDefinition;
+use FiscalIdentifiers\Definitions\IdentifierDefinition;
+use FiscalIdentifiers\Enums\IdentifierType;
+use FiscalIdentifiers\Validation\RegexValidator;
 
 final class Portugal
 {

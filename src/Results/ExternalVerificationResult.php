@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace LuisCoutinho\FiscalIdentifiers\Results;
+namespace FiscalIdentifiers\Results;
 
-use LuisCoutinho\FiscalIdentifiers\Enums\ValidationStatus;
+use FiscalIdentifiers\Enums\ValidationStatus;
 
 final readonly class ExternalVerificationResult
 {

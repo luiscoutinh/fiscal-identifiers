@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace LuisCoutinho\FiscalIdentifiers\Definitions;
+namespace FiscalIdentifiers\Definitions;
 
-use LuisCoutinho\FiscalIdentifiers\Contracts\LocalValidator;
-use LuisCoutinho\FiscalIdentifiers\Contracts\Normalizer;
-use LuisCoutinho\FiscalIdentifiers\Enums\IdentifierType;
+use FiscalIdentifiers\Contracts\LocalValidator;
+use FiscalIdentifiers\Contracts\Normalizer;
+use FiscalIdentifiers\Enums\IdentifierType;
 
 final readonly class IdentifierDefinition
 {

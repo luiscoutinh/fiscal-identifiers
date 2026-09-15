@@ -2,13 +2,19 @@
 
 declare(strict_types=1);
 
-namespace LuisCoutinho\FiscalIdentifiers\Validation;
+namespace FiscalIdentifiers\Validation;
 
-use LuisCoutinho\FiscalIdentifiers\Contracts\LocalValidator;
+use FiscalIdentifiers\Contracts\LocalValidator;
+use InvalidArgumentException;
 
 final readonly class RegexValidator implements LocalValidator
 {
-    public function __construct(private string $pattern) {}
+    public function __construct(private string $pattern)
+    {
+        if (@preg_match($pattern, '') === false) {
+            throw new InvalidArgumentException('Invalid regular expression.');
+        }
+    }
 
     public function validate(string $value): bool
     {

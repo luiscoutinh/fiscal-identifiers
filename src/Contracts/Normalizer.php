@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace LuisCoutinho\FiscalIdentifiers\Contracts;
+namespace FiscalIdentifiers\Contracts;
 
 interface Normalizer
 {

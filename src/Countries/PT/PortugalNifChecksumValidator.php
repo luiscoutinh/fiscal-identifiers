@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace LuisCoutinho\FiscalIdentifiers\Countries\PT;
+namespace FiscalIdentifiers\Countries\PT;
 
-use LuisCoutinho\FiscalIdentifiers\Contracts\LocalValidator;
+use FiscalIdentifiers\Contracts\LocalValidator;
 
 final class PortugalNifChecksumValidator implements LocalValidator
 {
@@ -16,7 +16,7 @@ final class PortugalNifChecksumValidator implements LocalValidator
 
         $sum = 0;
 
-        for ($index = 0; $index < 8; $index++) {
+        for ($index = 0; $index < 8; ++$index) {
             $sum += ((int) $value[$index]) * (9 - $index);
         }
 

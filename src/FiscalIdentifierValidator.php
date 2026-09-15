@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace LuisCoutinho\FiscalIdentifiers;
+namespace FiscalIdentifiers;
 
-use LuisCoutinho\FiscalIdentifiers\Configuration\ValidationConfiguration;
-use LuisCoutinho\FiscalIdentifiers\Enums\IdentifierType;
-use LuisCoutinho\FiscalIdentifiers\Enums\ValidationDecision;
-use LuisCoutinho\FiscalIdentifiers\Enums\ValidationStatus;
-use LuisCoutinho\FiscalIdentifiers\Registry\CountryRegistry;
-use LuisCoutinho\FiscalIdentifiers\Registry\ProviderRegistry;
-use LuisCoutinho\FiscalIdentifiers\Results\ExternalVerificationResult;
-use LuisCoutinho\FiscalIdentifiers\Results\ValidationResult;
-use LuisCoutinho\FiscalIdentifiers\Results\ValidationStepResult;
+use FiscalIdentifiers\Configuration\ValidationConfiguration;
+use FiscalIdentifiers\Enums\IdentifierType;
+use FiscalIdentifiers\Enums\ValidationDecision;
+use FiscalIdentifiers\Enums\ValidationStatus;
+use FiscalIdentifiers\Registry\CountryRegistry;
+use FiscalIdentifiers\Registry\ProviderRegistry;
+use FiscalIdentifiers\Results\ExternalVerificationResult;
+use FiscalIdentifiers\Results\ValidationResult;
+use FiscalIdentifiers\Results\ValidationStepResult;
 
 final readonly class FiscalIdentifierValidator
 {
@@ -47,7 +47,7 @@ final readonly class FiscalIdentifierValidator
             'normalization' => new ValidationStepResult(ValidationStatus::Passed),
         ];
 
-        if (! $definition->formatValidator->validate($normalized)) {
+        if (!$definition->formatValidator->validate($normalized)) {
             $steps['format'] = new ValidationStepResult(ValidationStatus::Failed);
 
             return new ValidationResult($countryCode, $value, $normalized, ValidationDecision::Rejected, $steps);
@@ -56,7 +56,7 @@ final readonly class FiscalIdentifierValidator
         $steps['format'] = new ValidationStepResult(ValidationStatus::Passed);
 
         if ($definition->checksumValidator !== null) {
-            if (! $definition->checksumValidator->validate($normalized)) {
+            if (!$definition->checksumValidator->validate($normalized)) {
                 $steps['checksum'] = new ValidationStepResult(ValidationStatus::Failed);
 
                 return new ValidationResult($countryCode, $value, $normalized, ValidationDecision::Rejected, $steps);
@@ -69,8 +69,8 @@ final readonly class FiscalIdentifierValidator
 
         if ($definition->externalProvider === null) {
             $steps['external'] = new ValidationStepResult(ValidationStatus::NotSupported);
-        } elseif (! $this->configuration->isExternalValidationEnabledFor($countryCode)
-            || ! $this->configuration->isProviderEnabled($definition->externalProvider)) {
+        } elseif (!$this->configuration->isExternalValidationEnabledFor($countryCode)
+            || !$this->configuration->isProviderEnabled($definition->externalProvider)) {
             $steps['external'] = new ValidationStepResult(ValidationStatus::Disabled);
         } else {
             $provider = $this->providers->get($definition->externalProvider);

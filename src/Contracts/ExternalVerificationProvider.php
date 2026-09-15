@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace LuisCoutinho\FiscalIdentifiers\Contracts;
+namespace FiscalIdentifiers\Contracts;
 
-use LuisCoutinho\FiscalIdentifiers\FiscalIdentifier;
-use LuisCoutinho\FiscalIdentifiers\Results\ExternalVerificationResult;
+use FiscalIdentifiers\FiscalIdentifier;
+use FiscalIdentifiers\Results\ExternalVerificationResult;
 
 interface ExternalVerificationProvider
 {

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace LuisCoutinho\FiscalIdentifiers\Definitions;
+namespace FiscalIdentifiers\Definitions;
 
+use FiscalIdentifiers\Enums\IdentifierType;
 use InvalidArgumentException;
-use LuisCoutinho\FiscalIdentifiers\Enums\IdentifierType;
 use Symfony\Component\Intl\Countries;
 
 final readonly class CountryDefinition
@@ -15,7 +15,7 @@ final readonly class CountryDefinition
         public string $countryCode,
         public array $identifiers,
     ) {
-        if (! Countries::exists($countryCode)) {
+        if (!Countries::exists($countryCode)) {
             throw new InvalidArgumentException("Unknown ISO 3166-1 alpha-2 country code: {$countryCode}");
         }
     }
