@@ -2,6 +2,7 @@
     "name": "luiscoutinh/fiscal-identifiers",
     "description": "Worldwide fiscal identifier validation for PHP, with normalization, country-specific rules, checksums, external verification providers, and configurable acceptance and output policies.",
     "type": "library",
+    "license": "proprietary",
     "require": {
         "php": "^8.3",
         "symfony/intl": "^7.3 || ^8.0"
