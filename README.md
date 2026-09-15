@@ -1,15 +1,15 @@
 # Fiscal Identifiers
 
-[![CI](https://github.com/luiscoutinh/fiscal-identifiers/actions/workflows/ci.yml/badge.svg)](https://github.com/luiscoutinh/fiscal-identifiers/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![CI](https://github.com/luiscoutinh/fiscal-identifiers/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/luiscoutinh/fiscal-identifiers/actions/workflows/ci.yml) [![Coverage](.github/coverage/coverage.svg)](https://github.com/luiscoutinh/fiscal-identifiers/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 A framework-agnostic PHP core being developed for fiscal identifier normalization
 and validation across jurisdictions.
 
-> **Status: infrastructure only.** No country validators, normalization API,
-> checksum implementations or external verification providers exist yet. There is
-> no stable public API or production-ready release. Portugal below is a teaching
-> example, not a supported jurisdiction.
+> **Status: early development.** The core API and the first Portuguese VAT validator
+> are implemented. Portugal currently supports normalization, format and NIF checksum
+> validation. VIES is declared as the external provider, but concrete network
+> verification is not implemented yet. The public API may still change before the
+> first stable release.
 
 ## What is a fiscal identifier?
 
@@ -44,9 +44,9 @@ and the [European Commission's VAT identification overview](https://taxation-cus
 
 Not every scheme has every layer or a checksum. Normalization policies must be
 explicit, and an unsupported scheme must not be reported as invalid merely because
-it is unsupported. External results should distinguish **not checked**, **confirmed**,
-**not confirmed** and **unavailable/error**, rather than forcing every outcome into
-a single boolean. These are design principles, not an implemented result model.
+it is unsupported. External results distinguish successful validation, rejection,
+unsupported capability, intentionally disabled checks and unavailable services.
+Validation capability remains separate from the package's acceptance decision.
 
 ## Portugal: NIF, NIPC and intra-EU VAT
 
@@ -59,15 +59,14 @@ See the [OECD Portugal TIN sheet](https://www.oecd.org/content/dam/oecd/en/topic
 and the [Portuguese guidance on NIPC](https://www.dgo.gov.pt/instrucoes/Instrucoes/ca1410.pdf).
 
 For a Portuguese VAT identifier, the `PT` prefix accompanies the domestic nine-digit
-number. A useful conceptual sequence is:
+number. The current local validation sequence is:
 
 ```text
-Input + explicit context: Portugal, VAT, intra-EU transactions
-    -> apply the agreed normalization policy
-    -> check PT prefix and exactly nine ASCII digits
-    -> check domestic structure and applicable category rules
+Input + explicit context: Portugal, VAT
+    -> apply the normalization policy
+    -> check exactly nine ASCII digits after normalization
     -> verify the domestic check digit
-    -> consult VIES if intra-EU VAT registration must be checked
+    -> resolve the configured external provider when enabled
 ```
 
 For example, `/\A[0-9]{9}\z/` describes only the basic domestic shape;
@@ -85,30 +84,36 @@ reflect missing activation or incomplete registration; a service failure means
 verification could not be completed. Keep the purpose and time of verification
 with any result. See [Your Europe's explanation of VIES results](https://europa.eu/youreurope/business/finance-and-tax/vat/check-vat-number-vies/index_en.htm).
 
-## Conceptual usage — not a callable package API
+## Current API — early development
 
-These examples describe application decisions only. No classes or methods for this
-flow are implemented, and no live registry is contacted by this package.
+The package already exposes the validation core, but the API is not considered
+stable yet. Applications can explicitly register country definitions and external
+providers, then inspect acceptance and verification separately.
 
-```text
-Example A: domestic Portuguese identifier on a form
-  context = { jurisdiction: PT, scheme: domestic tax identifier }
-  input = user-supplied string
-  normalize under an explicit policy
-  evaluate format, structure, checksum and applicable local rules
-  output = local plausibility result; external status = not checked
+```php
+use FiscalIdentifiers\Countries\PT\Portugal;
+use FiscalIdentifiers\FiscalIdentifierValidator;
+use FiscalIdentifiers\Registry\CountryRegistry;
+use FiscalIdentifiers\Registry\ProviderRegistry;
 
-Example B: intra-EU VAT registration check
-  context = { jurisdiction: PT, scheme: VAT, purpose: intra-EU trade }
-  perform the applicable local checks
-  if locally plausible, request external verification via VIES
-  retain the external response and verification time
-  on timeout, report verification unavailable; do not claim invalid registration
+$countries = new CountryRegistry();
+$countries->register(Portugal::definition());
+
+$validator = new FiscalIdentifierValidator(
+    $countries,
+    new ProviderRegistry(),
+);
+
+$result = $validator->validate('PT', 'PT 501 964 843');
+
+$result->isAccepted(); // application/package decision
+$result->isVerified(); // authoritative external verification succeeded
+$result->toArray();    // detailed step-by-step result
 ```
 
-Neither example establishes ownership or constitutes a complete tax-compliance
-decision. Application acceptance policies and external service integration remain
-separate concerns from deterministic local checks.
+An unavailable or unregistered external service is not silently represented as a
+successful authoritative verification. Application acceptance policy and external
+verification capability remain separate concepts.
 
 ## Development setup
 
@@ -136,16 +141,37 @@ composer check
 | `composer check` | Strict Composer validation, tests, analysis and style. |
 | `composer test:coverage` | Require 100% line coverage and write Clover XML / HTML reports; enable Xdebug or PCOV first. |
 
-The temporary `FiscalIdentifiers\Internal\Package` stub is not public API. Its
-single smoke test exercises PSR-4 loading and the test/coverage pipeline. **100%
-coverage at this stage measures that stub only, not functional validation support.**
-CI tests highest dependencies on PHP 8.3–8.5 and lowest dependencies on PHP 8.3;
-it also runs quality checks and uploads coverage reports for 14 days.
+CI tests highest dependencies on PHP 8.3–8.5 and lowest supported dependencies on
+PHP 8.3. The quality job performs Composer validation, PHPStan and PHP-CS-Fixer,
+then runs the test suite once with PCOV to produce the coverage report. This avoids
+running the same tests twice inside the quality job while preserving the compatibility
+matrix.
+
+## Code coverage
+
+[![Code coverage summary](.github/coverage/coverage-summary.svg)](https://github.com/luiscoutinh/fiscal-identifiers/actions/workflows/ci.yml)
+
+Coverage measures executable line coverage for all production code under `src/`.
+The project currently enforces **100% line coverage** through `composer test:coverage`;
+a coverage regression therefore fails CI immediately rather than merely changing a
+badge.
+
+The badge and summary card track the latest successful `main` measurement. Line
+coverage is the primary gate, while method and class coverage are shown as supporting
+diagnostics. Metrics are generated from the Clover report produced by the existing
+CI quality job, so no additional test run and no external reporting service such as
+Codecov or Coveralls is required.
+
+After a successful trusted `main` CI run, a separate presentation workflow renders
+`.github/coverage/coverage.svg`, `coverage-summary.svg` and `coverage.json`. The
+automated update uses GitHub's `[skip ci]` marker to avoid CI loops. Raw Clover and
+HTML reports remain available as workflow artifacts for 30 days.
 
 ```text
 src/                    Core source (FiscalIdentifiers\)
 tests/                  Pest test suite
-.github/workflows/      CI checks and coverage reports
+.github/workflows/      CI checks and coverage presentation
+.github/coverage/       Latest main-branch coverage badge and summary
 composer.json           Package metadata, autoloading and development commands
 phpstan.neon            Static analysis configuration
 phpunit.xml             Test suite and coverage source configuration
