@@ -15,7 +15,6 @@ final readonly class IdentifierDefinition
         public Normalizer $normalizer,
         public LocalValidator $formatValidator,
         public ?LocalValidator $checksumValidator = null,
-        public ?string $externalProvider = null,
     ) {
     }
 }

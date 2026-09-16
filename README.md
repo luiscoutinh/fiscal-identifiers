@@ -5,11 +5,11 @@
 A framework-agnostic PHP core being developed for fiscal identifier normalization
 and validation across jurisdictions.
 
-> **Status: early development.** The core API and the first Portuguese VAT validator
-> are implemented. Portugal currently supports normalization, format and NIF checksum
-> validation. VIES is declared as the external provider, but concrete network
-> verification is not implemented yet. The public API may still change before the
-> first stable release.
+> **Status: early development.** The core API and the first Portuguese VAT-oriented
+> local validator are implemented. Portugal currently supports normalization, format
+> and NIF checksum validation. Authoritative registry checks such as VIES are
+> deliberately outside the validation pipeline. The public API may still change
+> before the first stable release.
 
 ## What is a fiscal identifier?
 
@@ -31,7 +31,7 @@ Country prefixes are scheme-specific; they should not be treated as a universal
 country-detection mechanism. See the [OECD's jurisdiction-specific TIN guidance](https://www.oecd.org/en/networks/global-forum-tax-transparency/resources/aeoi-implementation-portal/tax-identification-numbers.html)
 and the [European Commission's VAT identification overview](https://taxation-customs.ec.europa.eu/taxation/vat/vat-directive/vat-identification-numbers_en).
 
-## Validation is a sequence of different questions
+## Validation is a sequence of local questions
 
 | Layer | Question | What a pass does **not** establish |
 | --- | --- | --- |
@@ -40,13 +40,35 @@ and the [European Commission's VAT identification overview](https://taxation-cus
 | **Length / structure** | Are the length, prefix and component positions correct for this scheme? | That the component values are semantically permitted. Regex may cover some of this layer. |
 | **Checksum / check digit** | Does the control digit agree with the scheme's calculation? | Existence or ownership. A checksum helps detect some transcription errors; it is not authentication. |
 | **Semantic / jurisdiction rules** | Are identifier categories, reserved ranges or other contextual rules permitted under the relevant rules? | Current registration. Rules may depend on identifier type and date. |
-| **External verification** | Does an authoritative registry confirm the relevant registration or status at this time? | Universal validity, identity, ownership or validity for a different purpose. Availability and response semantics matter. |
 
 Not every scheme has every layer or a checksum. Normalization policies must be
 explicit, and an unsupported scheme must not be reported as invalid merely because
-it is unsupported. External results distinguish successful validation, rejection,
-unsupported capability, intentionally disabled checks and unavailable services.
-Validation capability remains separate from the package's acceptance decision.
+it is unsupported. The validation result describes only the deterministic/local
+checks that the package actually performed.
+
+## Validation and authoritative verification are different concerns
+
+This package treats these as two separate questions:
+
+```text
+Validation
+  "Does this identifier conform to the known rules for this jurisdiction/type?"
+
+Authoritative verification
+  "Does an external authority or registry confirm a specific registration or status?"
+```
+
+An authoritative lookup must not silently change the meaning of local validation.
+A registry can answer a narrower question than "does this fiscal identifier exist?".
+For example, VIES concerns the relevant intra-EU VAT registration status; a negative
+VIES result is not the same statement as "this domestic tax identifier is
+structurally invalid".
+
+Future integrations may therefore expose explicit operations such as a VIES
+registration check or a jurisdiction-specific authority lookup, where a suitable
+official service exists. Those integrations belong to a separate verification
+layer with their own statuses and semantics; they are not validation steps and do
+not participate in the current `FiscalIdentifierValidator` decision.
 
 ## Portugal: NIF, NIPC and intra-EU VAT
 
@@ -58,15 +80,14 @@ Portuguese TINs have nine digits, including a final check digit.
 See the [OECD Portugal TIN sheet](https://www.oecd.org/content/dam/oecd/en/topics/policy-issue-focus/aeoi/portugal-tin.pdf)
 and the [Portuguese guidance on NIPC](https://www.dgo.gov.pt/instrucoes/Instrucoes/ca1410.pdf).
 
-For a Portuguese VAT identifier, the `PT` prefix accompanies the domestic nine-digit
-number. The current local validation sequence is:
+For a Portuguese VAT-form identifier, the `PT` prefix can accompany the domestic
+nine-digit number. The current local validation sequence is:
 
 ```text
-Input + explicit context: Portugal, VAT
+Input + explicit context: Portugal, VAT-oriented local validation
     -> apply the normalization policy
     -> check exactly nine ASCII digits after normalization
     -> verify the domestic check digit
-    -> resolve the configured external provider when enabled
 ```
 
 For example, `/\A[0-9]{9}\z/` describes only the basic domestic shape;
@@ -76,44 +97,36 @@ the latter pattern; it is **not** presented as a valid or assigned identifier.
 The local checksum calculation compares a derived control digit with the final
 digit. Passing it establishes mathematical plausibility, not assignment.
 
-**VIES complements local validation; it does not replace it.** VIES checks the
-relevant intra-EU VAT registration information supplied by national systems.
-Not every NIF belongs to a VAT-registered taxpayer, and not every domestic VAT
-registration is activated for intra-EU transactions. A negative VIES response can
-reflect missing activation or incomplete registration; a service failure means
-verification could not be completed. Keep the purpose and time of verification
-with any result. See [Your Europe's explanation of VIES results](https://europa.eu/youreurope/business/finance-and-tax/vat/check-vat-number-vies/index_en.htm).
+VIES, when supported in the future, will be documented and exposed as a separate
+registry-verification capability rather than as a step in this local validation
+sequence. See [Your Europe's explanation of VIES results](https://europa.eu/youreurope/business/finance-and-tax/vat/check-vat-number-vies/index_en.htm).
 
 ## Current API — early development
 
-The package already exposes the validation core, but the API is not considered
-stable yet. Applications can explicitly register country definitions and external
-providers, then inspect acceptance and verification separately.
+The package exposes the local validation core, but the API is not considered
+stable yet. Applications explicitly register country definitions and inspect the
+validation decision and individual local steps.
 
 ```php
 use FiscalIdentifiers\Countries\PT\Portugal;
 use FiscalIdentifiers\FiscalIdentifierValidator;
 use FiscalIdentifiers\Registry\CountryRegistry;
-use FiscalIdentifiers\Registry\ProviderRegistry;
 
 $countries = new CountryRegistry();
 $countries->register(Portugal::definition());
 
-$validator = new FiscalIdentifierValidator(
-    $countries,
-    new ProviderRegistry(),
-);
+$validator = new FiscalIdentifierValidator($countries);
 
-$result = $validator->validate('PT', 'PT 501 964 843');
+$result = $validator->validate('PT', 'PT 123 456 789');
 
-$result->isAccepted(); // application/package decision
-$result->isVerified(); // authoritative external verification succeeded
-$result->toArray();    // detailed step-by-step result
+$result->isAccepted(); // local validation decision
+$result->toArray();    // normalization / format / checksum details
 ```
 
-An unavailable or unregistered external service is not silently represented as a
-successful authoritative verification. Application acceptance policy and external
-verification capability remain separate concepts.
+No network request or registry lookup is performed by `validate()`. If an
+application later needs an authoritative status, it should request that explicitly
+through a dedicated verification integration rather than infer it from the local
+validation result.
 
 ## Development setup
 

@@ -19,7 +19,6 @@ final class Portugal
                 normalizer: new PortugalVatNormalizer(),
                 formatValidator: new RegexValidator('/^\d{9}$/'),
                 checksumValidator: new PortugalNifChecksumValidator(),
-                externalProvider: 'vies',
             ),
         ]);
     }

@@ -4,23 +4,17 @@ declare(strict_types=1);
 
 namespace FiscalIdentifiers;
 
-use FiscalIdentifiers\Configuration\ValidationConfiguration;
 use FiscalIdentifiers\Enums\IdentifierType;
 use FiscalIdentifiers\Enums\ValidationDecision;
 use FiscalIdentifiers\Enums\ValidationStatus;
 use FiscalIdentifiers\Registry\CountryRegistry;
-use FiscalIdentifiers\Registry\ProviderRegistry;
-use FiscalIdentifiers\Results\ExternalVerificationResult;
 use FiscalIdentifiers\Results\ValidationResult;
 use FiscalIdentifiers\Results\ValidationStepResult;
 
 final readonly class FiscalIdentifierValidator
 {
-    public function __construct(
-        private CountryRegistry $countries,
-        private ProviderRegistry $providers,
-        private ValidationConfiguration $configuration = new ValidationConfiguration(),
-    ) {
+    public function __construct(private CountryRegistry $countries)
+    {
     }
 
     public function validate(string $countryCode, string $value, IdentifierType $type = IdentifierType::Vat): ValidationResult
@@ -38,7 +32,6 @@ final readonly class FiscalIdentifierValidator
                 [
                     'format' => new ValidationStepResult(ValidationStatus::NotSupported),
                     'checksum' => new ValidationStepResult(ValidationStatus::NotSupported),
-                    'external' => new ValidationStepResult(ValidationStatus::NotSupported),
                 ],
             );
         }
@@ -68,23 +61,12 @@ final readonly class FiscalIdentifierValidator
             $steps['checksum'] = new ValidationStepResult(ValidationStatus::NotSupported);
         }
 
-        if ($definition->externalProvider === null) {
-            $steps['external'] = new ValidationStepResult(ValidationStatus::NotSupported);
-        } elseif (!$this->configuration->isExternalValidationEnabledFor($countryCode)
-            || !$this->configuration->isProviderEnabled($definition->externalProvider)) {
-            $steps['external'] = new ValidationStepResult(ValidationStatus::Disabled);
-        } else {
-            $provider = $this->providers->get($definition->externalProvider);
-            $identifier = new FiscalIdentifier($countryCode, $type, $normalized);
-            $steps['external'] = $provider === null
-                ? new ExternalVerificationResult(ValidationStatus::Unavailable, message: 'External provider is not registered.')
-                : $provider->verify($identifier);
-        }
-
-        $decision = $steps['external']->status === ValidationStatus::Failed
-            ? ValidationDecision::Rejected
-            : ValidationDecision::Accepted;
-
-        return new ValidationResult($countryCode, $value, $normalized, $decision, $steps);
+        return new ValidationResult(
+            $countryCode,
+            $value,
+            $normalized,
+            ValidationDecision::Accepted,
+            $steps,
+        );
     }
 }
