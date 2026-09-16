@@ -28,6 +28,39 @@ new IdentifierResolutionConfiguration(defaultSubject: 'company')
 
 so `validate('ES', $value)` resolves to `entity_nif`.
 
+## Optional entity category restriction
+
+The initial letter of an Spanish entity NIF identifies the official legal-form/entity category. The package exposes that code as result metadata and lets callers optionally require a specific category while keeping `entity_nif` as the identifier scheme.
+
+Any supported entity category:
+
+```php
+$validator->validateFor(
+    countryCode: 'ES',
+    value: $value,
+    subject: 'company',
+);
+```
+
+A specific official category, for example `B`:
+
+```php
+$validator->validateFor(
+    countryCode: 'ES',
+    value: $value,
+    subject: 'company',
+    category: 'B',
+);
+```
+
+When no category is supplied, any structurally supported entity category is acceptable. When a category is supplied, the identifier must resolve to that category. The resolved official code is also exposed as:
+
+```php
+$result->metadata['category'];
+```
+
+Category is deliberately modeled as a restriction on an identifier, not as another identifier type. This keeps legal form/entity class separate from fiscal identifier scheme and leaves the mechanism reusable for jurisdictions that encode comparable classifications differently.
+
 ## DNI-based NIF
 
 For Spanish natural persons, AEAT states that the general NIF is the DNI number followed by an uppercase verification character. The format has nine characters: eight digits, including possible leading zeroes, plus the control letter.
