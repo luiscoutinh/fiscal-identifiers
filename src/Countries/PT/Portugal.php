@@ -6,7 +6,7 @@ namespace FiscalIdentifiers\Countries\PT;
 
 use FiscalIdentifiers\Definitions\CountryDefinition;
 use FiscalIdentifiers\Definitions\IdentifierDefinition;
-use FiscalIdentifiers\Enums\IdentifierType;
+use FiscalIdentifiers\IdentifierType;
 use FiscalIdentifiers\Validation\RegexValidator;
 
 final class Portugal
