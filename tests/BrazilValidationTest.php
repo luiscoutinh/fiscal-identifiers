@@ -2,26 +2,52 @@
 
 declare(strict_types=1);
 
+use FiscalIdentifiers\Configuration\IdentifierResolutionConfiguration;
 use FiscalIdentifiers\Countries\BR\Brazil;
 use FiscalIdentifiers\Countries\BR\BrazilCnpjChecksumValidator;
 use FiscalIdentifiers\Countries\BR\BrazilCnpjNormalizer;
 use FiscalIdentifiers\Countries\BR\BrazilCpfChecksumValidator;
 use FiscalIdentifiers\Countries\BR\BrazilCpfNormalizer;
+use FiscalIdentifiers\Definitions\CountryDefinition;
 use FiscalIdentifiers\Enums\ValidationStatus;
 use FiscalIdentifiers\FiscalIdentifierValidator;
+use FiscalIdentifiers\IdentifierSubject;
 use FiscalIdentifiers\Registry\CountryRegistry;
 
-function brazilValidator(): FiscalIdentifierValidator
+function brazilValidator(?IdentifierResolutionConfiguration $configuration = null): FiscalIdentifierValidator
 {
     $countries = new CountryRegistry();
     $countries->register(Brazil::definition());
 
-    return new FiscalIdentifierValidator($countries);
+    return new FiscalIdentifierValidator(
+        $countries,
+        $configuration ?? new IdentifierResolutionConfiguration(),
+    );
 }
 
-test('requires an explicit Brazilian identifier type', function (): void {
+test('requires context when neither an explicit type nor a default subject is configured', function (): void {
     expect(fn () => brazilValidator()->validate('BR', '99999999050'))
         ->toThrow(\InvalidArgumentException::class);
+});
+
+test('resolves the configured default company subject to CNPJ', function (): void {
+    $validator = brazilValidator(new IdentifierResolutionConfiguration(defaultSubject: 'company'));
+    $result = $validator->validate('BR', '12.abc.345/01de-35');
+
+    expect($result->normalized)->toBe('12ABC34501DE35')
+        ->and($result->isAccepted())->toBeTrue();
+});
+
+test('supports explicit subject-based resolution independently of the configured default', function (): void {
+    $validator = brazilValidator(new IdentifierResolutionConfiguration(defaultSubject: 'company'));
+    $person = $validator->validateFor('BR', '999.999.990-50', 'person');
+    $unsupported = $validator->validateFor('BR', '123', 'non_profit');
+    $unsupportedCountry = $validator->validateFor('AF', '123', 'company');
+
+    expect($person->normalized)->toBe('99999999050')
+        ->and($person->isAccepted())->toBeTrue()
+        ->and($unsupported->isSupported())->toBeFalse()
+        ->and($unsupportedCountry->isSupported())->toBeFalse();
 });
 
 test('normalizes and validates a checksum-consistent CPF', function (): void {
@@ -62,6 +88,17 @@ test('rejects malformed, checksum-invalid and repeated CNPJs', function (): void
     expect($format->steps['format']->status)->toBe(ValidationStatus::Failed)
         ->and($checksum->steps['checksum']->status)->toBe(ValidationStatus::Failed)
         ->and($repeated->steps['checksum']->status)->toBe(ValidationStatus::Failed);
+});
+
+test('rejects invalid subject configuration and mappings', function (): void {
+    $definition = Brazil::definition();
+
+    expect(fn () => IdentifierSubject::from('legal entity'))->toThrow(\InvalidArgumentException::class)
+        ->and(fn () => new CountryDefinition(
+            'BR',
+            $definition->identifiers,
+            subjectIdentifierTypes: ['company' => 'unknown'],
+        ))->toThrow(\InvalidArgumentException::class);
 });
 
 test('validates Brazilian building blocks directly', function (): void {
