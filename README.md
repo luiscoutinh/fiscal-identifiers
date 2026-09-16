@@ -4,7 +4,7 @@
 
 A framework-agnostic PHP library for normalizing and validating fiscal identifiers across jurisdictions.
 
-> **Status: early development.** Portugal, Brazil, Spain and Germany are currently implemented. The public API may still change before the first stable release. Validation is deterministic and local; authoritative registry checks such as VIES are deliberately kept outside the validation pipeline.
+> **Status: early development.** Portugal, Brazil, Spain, Germany and the United Kingdom are currently implemented. The public API may still change before the first stable release. Validation is deterministic and local; authoritative registry checks such as VIES are deliberately kept outside the validation pipeline.
 
 ## Why this package exists
 
@@ -19,9 +19,9 @@ country
           -> optional category
 ```
 
-- **Country** identifies the jurisdiction, using ISO 3166-1 alpha-2 codes such as `PT`, `BR`, `ES` or `DE`.
+- **Country** identifies the jurisdiction, using ISO 3166-1 alpha-2 codes such as `PT`, `BR`, `ES`, `DE` or `GB`.
 - **Subject** describes who or what is being identified, such as `person` or `company`.
-- **Identifier type** is the concrete fiscal scheme, such as `nif`, `cnpj`, `nie` or `ust_idnr`.
+- **Identifier type** is the concrete fiscal scheme, such as `nif`, `cnpj`, `nie`, `ust_idnr` or `utr`.
 - **Category** is an optional jurisdiction-specific subdivision encoded inside an identifier, such as the Spanish entity-class letter `B`.
 
 Subjects are a convenience layer. They do not replace identifier types. A country may map `company` to one general identifier while still exposing additional purpose-specific identifiers explicitly.
@@ -34,6 +34,7 @@ Subjects are a convenience layer. They do not replace identifier types. A countr
 | **Brazil (`BR`)** | `person -> cpf`, `company -> cnpj` | `cpf`, `cnpj` | CNPJ supports both numeric and current alphanumeric forms. |
 | **Spain (`ES`)** | `company -> entity_nif`; generic `person` is intentionally ambiguous | `dni_nif`, `nie`, `entity_nif` | Entity NIF exposes the official entity-class letter as an optional category. |
 | **Germany (`DE`)** | `person -> idnr`, `company -> widnr` | `idnr`, `widnr`, `ust_idnr`, `steuernummer` | One company can have several identifiers with different purposes. |
+| **United Kingdom (`GB`)** | `person -> utr`, `company -> utr` | `utr`, `vat_registration_number`, `employer_paye_reference` | Companies House company numbers are intentionally kept outside fiscal-identifier validation. |
 
 Detailed jurisdiction notes and authoritative sources live under [`docs/jurisdictions`](docs/jurisdictions/README.md).
 
@@ -45,6 +46,7 @@ Applications register the country definitions they need and then validate either
 use FiscalIdentifiers\Countries\BR\Brazil;
 use FiscalIdentifiers\Countries\DE\Germany;
 use FiscalIdentifiers\Countries\ES\Spain;
+use FiscalIdentifiers\Countries\GB\GreatBritain;
 use FiscalIdentifiers\Countries\PT\Portugal;
 use FiscalIdentifiers\FiscalIdentifierValidator;
 use FiscalIdentifiers\Registry\CountryRegistry;
@@ -54,6 +56,7 @@ $countries->register(Portugal::definition());
 $countries->register(Brazil::definition());
 $countries->register(Spain::definition());
 $countries->register(Germany::definition());
+$countries->register(GreatBritain::definition());
 
 $validator = new FiscalIdentifierValidator($countries);
 ```
@@ -66,6 +69,7 @@ Use `validate()` with an identifier type when you know exactly which scheme the 
 $result = $validator->validate('BR', $value, 'cnpj');
 $result = $validator->validate('ES', $value, 'nie');
 $result = $validator->validate('DE', $value, 'ust_idnr');
+$result = $validator->validate('GB', $value, 'vat_registration_number');
 ```
 
 This is the precise, low-level API.
@@ -88,6 +92,8 @@ For Portugal:
 $validator->validateFor('PT', $value, 'person');  // nif
 $validator->validateFor('PT', $value, 'company'); // nipc
 ```
+
+For the United Kingdom, both `person` and `company` resolve to the general HMRC `utr` scheme when a UTR exists. Purpose-specific references such as VAT registration and employer PAYE remain explicit identifier types.
 
 Spain deliberately does **not** map generic `person` to one identifier type because natural persons may use different schemes such as DNI-based NIF or NIE. In that situation, callers must choose the identifier type explicitly.
 
@@ -144,12 +150,14 @@ $validator->validate('BR', $cnpj);   // company -> cnpj
 $validator->validate('PT', $nipc);   // company -> nipc
 $validator->validate('ES', $nif);    // company -> entity_nif
 $validator->validate('DE', $widnr);  // company -> widnr
+$validator->validate('GB', $utr);    // company -> utr
 ```
 
 The default subject is only a resolution convenience. It does not stop callers from explicitly requesting another identifier type:
 
 ```php
 $validator->validate('DE', $vatNumber, 'ust_idnr');
+$validator->validate('GB', $vatNumber, 'vat_registration_number');
 ```
 
 A country may also define its own fallback identifier type when that is unambiguous. Explicit identifier type always remains the clearest choice when context matters.
