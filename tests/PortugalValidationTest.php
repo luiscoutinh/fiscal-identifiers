@@ -9,9 +9,9 @@ use FiscalIdentifiers\Countries\PT\PortugalNifChecksumValidator;
 use FiscalIdentifiers\Countries\PT\PortugalNifNormalizer;
 use FiscalIdentifiers\Definitions\CountryDefinition;
 use FiscalIdentifiers\Definitions\IdentifierDefinition;
-use FiscalIdentifiers\Enums\IdentifierType;
 use FiscalIdentifiers\Enums\ValidationStatus;
 use FiscalIdentifiers\FiscalIdentifierValidator;
+use FiscalIdentifiers\IdentifierType;
 use FiscalIdentifiers\Registry\CountryRegistry;
 use FiscalIdentifiers\Validation\RegexValidator;
 
