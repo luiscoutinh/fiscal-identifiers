@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace FiscalIdentifiers\Definitions;
 
+use FiscalIdentifiers\IdentifierSubject;
 use FiscalIdentifiers\IdentifierType;
 use InvalidArgumentException;
 use Symfony\Component\Intl\Countries;
@@ -17,13 +18,18 @@ final readonly class CountryDefinition
 
     public ?IdentifierType $defaultIdentifierType;
 
+    /** @var array<string, IdentifierType> */
+    public array $subjectIdentifierTypes;
+
     /**
      * @param array<string, IdentifierDefinition> $identifiers
+     * @param array<string, IdentifierType|string> $subjectIdentifierTypes
      */
     public function __construct(
         string $countryCode,
         array $identifiers,
         IdentifierType|string|null $defaultIdentifierType = null,
+        array $subjectIdentifierTypes = [],
     ) {
         $countryCode = strtoupper(trim($countryCode));
 
@@ -45,9 +51,22 @@ final readonly class CountryDefinition
             throw new InvalidArgumentException("Default identifier type '{$default->value}' is not defined for {$countryCode}.");
         }
 
+        $subjects = [];
+        foreach ($subjectIdentifierTypes as $subject => $type) {
+            $subject = IdentifierSubject::from($subject)->value;
+            $type = is_string($type) ? IdentifierType::from($type) : $type;
+
+            if (!isset($identifiers[$type->value])) {
+                throw new InvalidArgumentException("Identifier type '{$type->value}' mapped from subject '{$subject}' is not defined for {$countryCode}.");
+            }
+
+            $subjects[$subject] = $type;
+        }
+
         $this->countryCode = $countryCode;
         $this->identifiers = $identifiers;
         $this->defaultIdentifierType = $default;
+        $this->subjectIdentifierTypes = $subjects;
     }
 
     public function identifier(IdentifierType|string|null $type = null): ?IdentifierDefinition
@@ -63,5 +82,13 @@ final readonly class CountryDefinition
         }
 
         return $this->identifiers[$type->value] ?? null;
+    }
+
+    public function identifierForSubject(IdentifierSubject|string $subject): ?IdentifierDefinition
+    {
+        $subject = is_string($subject) ? IdentifierSubject::from($subject) : $subject;
+        $type = $this->subjectIdentifierTypes[$subject->value] ?? null;
+
+        return $type === null ? null : $this->identifier($type);
     }
 }
