@@ -8,13 +8,17 @@ use FiscalIdentifiers\Enums\ValidationDecision;
 
 final readonly class ValidationResult
 {
-    /** @param array<string, ValidationStepResult> $steps */
+    /**
+     * @param array<string, ValidationStepResult> $steps
+     * @param array<string, mixed> $metadata
+     */
     public function __construct(
         public string $countryCode,
         public string $original,
         public string $normalized,
         public ValidationDecision $decision,
         public array $steps,
+        public array $metadata = [],
     ) {
     }
 
@@ -57,6 +61,7 @@ final readonly class ValidationResult
                 ],
                 $this->steps,
             ),
+            'metadata' => $this->metadata,
         ];
     }
 }
