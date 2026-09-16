@@ -14,18 +14,31 @@ final class Portugal
     public static function definition(): CountryDefinition
     {
         $nif = IdentifierType::from('nif');
+        $nipc = IdentifierType::from('nipc');
+        $normalizer = new PortugalNifNormalizer();
+        $checksum = new PortugalNifChecksumValidator();
 
         return new CountryDefinition(
             'PT',
             [
                 $nif->value => new IdentifierDefinition(
                     type: $nif,
-                    normalizer: new PortugalNifNormalizer(),
+                    normalizer: $normalizer,
                     formatValidator: new RegexValidator('/^\d{9}$/'),
-                    checksumValidator: new PortugalNifChecksumValidator(),
+                    checksumValidator: $checksum,
+                ),
+                $nipc->value => new IdentifierDefinition(
+                    type: $nipc,
+                    normalizer: $normalizer,
+                    formatValidator: new RegexValidator('/^\d{9}$/'),
+                    checksumValidator: $checksum,
                 ),
             ],
             defaultIdentifierType: $nif,
+            subjectIdentifierTypes: [
+                'person' => $nif,
+                'company' => $nipc,
+            ],
         );
     }
 }
