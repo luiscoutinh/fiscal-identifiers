@@ -8,6 +8,7 @@ Each jurisdiction document describes the fiscal identifier schemes currently imp
 | Brazil (`BR`) | [BR.md](BR.md) | `cpf`, `cnpj` |
 | Spain (`ES`) | [ES.md](ES.md) | `dni_nif`, `nie`, `entity_nif` |
 | Germany (`DE`) | [DE.md](DE.md) | `idnr`, `widnr`, `ust_idnr`, `steuernummer` |
+| United Kingdom (`GB`) | [GB.md](GB.md) | `utr`, `vat_registration_number`, `employer_paye_reference` |
 
 ## Documentation contract
 
