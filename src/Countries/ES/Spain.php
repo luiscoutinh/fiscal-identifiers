@@ -37,6 +37,7 @@ final class Spain
                     type: $entityNif,
                     normalizer: $normalizer,
                     formatValidator: new RegexValidator('/^[ABCDEFGHJNPQRSUVW]\d{7}[A-Z0-9]$/'),
+                    categoryResolver: new SpainEntityNifCategoryResolver(),
                 ),
             ],
             subjectIdentifierTypes: [
