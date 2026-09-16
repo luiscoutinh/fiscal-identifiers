@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace FiscalIdentifiers;
 
-use FiscalIdentifiers\Enums\IdentifierType;
 use FiscalIdentifiers\Enums\ValidationDecision;
 use FiscalIdentifiers\Enums\ValidationStatus;
 use FiscalIdentifiers\Registry\CountryRegistry;
