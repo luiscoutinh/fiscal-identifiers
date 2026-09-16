@@ -16,19 +16,26 @@ final class Brazil
         $cpf = IdentifierType::from('cpf');
         $cnpj = IdentifierType::from('cnpj');
 
-        return new CountryDefinition('BR', [
-            $cpf->value => new IdentifierDefinition(
-                type: $cpf,
-                normalizer: new BrazilCpfNormalizer(),
-                formatValidator: new RegexValidator('/^\d{11}$/'),
-                checksumValidator: new BrazilCpfChecksumValidator(),
-            ),
-            $cnpj->value => new IdentifierDefinition(
-                type: $cnpj,
-                normalizer: new BrazilCnpjNormalizer(),
-                formatValidator: new RegexValidator('/^[A-Z0-9]{12}\d{2}$/'),
-                checksumValidator: new BrazilCnpjChecksumValidator(),
-            ),
-        ]);
+        return new CountryDefinition(
+            'BR',
+            [
+                $cpf->value => new IdentifierDefinition(
+                    type: $cpf,
+                    normalizer: new BrazilCpfNormalizer(),
+                    formatValidator: new RegexValidator('/^\d{11}$/'),
+                    checksumValidator: new BrazilCpfChecksumValidator(),
+                ),
+                $cnpj->value => new IdentifierDefinition(
+                    type: $cnpj,
+                    normalizer: new BrazilCnpjNormalizer(),
+                    formatValidator: new RegexValidator('/^[A-Z0-9]{12}\d{2}$/'),
+                    checksumValidator: new BrazilCnpjChecksumValidator(),
+                ),
+            ],
+            subjectIdentifierTypes: [
+                'person' => $cpf,
+                'company' => $cnpj,
+            ],
+        );
     }
 }
