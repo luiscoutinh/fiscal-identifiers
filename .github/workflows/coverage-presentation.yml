@@ -10,6 +10,7 @@ on:
 permissions:
   actions: read
   contents: write
+  pull-requests: write
 
 jobs:
   publish:
@@ -71,8 +72,11 @@ jobs:
         if: steps.artifact.outputs.available == 'true'
         run: python3 .github/scripts/render-coverage.py /tmp/coverage/clover.xml .github/coverage
 
-      - name: Publish coverage assets to main
+      - name: Publish coverage through pull request
         if: steps.artifact.outputs.available == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PRESENTATION_BRANCH: automation/coverage-presentation
         shell: bash
         run: |
           set -euo pipefail
@@ -86,5 +90,30 @@ jobs:
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$PRESENTATION_BRANCH"
           git commit -m "chore: update coverage presentation [skip ci]"
-          git push origin HEAD:main
+          git push --force origin "HEAD:$PRESENTATION_BRANCH"
+
+          pr_number="$(gh pr list \
+            --repo "$GITHUB_REPOSITORY" \
+            --base main \
+            --head "$PRESENTATION_BRANCH" \
+            --state open \
+            --json number \
+            --jq '.[0].number // empty')"
+
+          if [[ -z "$pr_number" ]]; then
+            pr_url="$(gh pr create \
+              --repo "$GITHUB_REPOSITORY" \
+              --base main \
+              --head "$PRESENTATION_BRANCH" \
+              --title "chore: update coverage presentation" \
+              --body "Automated coverage presentation update generated from the latest successful trusted main CI run. No tests are rerun; the values come from the CI coverage artifact.")"
+            pr_number="${pr_url##*/}"
+          fi
+
+          gh pr merge "$pr_number" \
+            --repo "$GITHUB_REPOSITORY" \
+            --auto \
+            --squash \
+            --delete-branch
