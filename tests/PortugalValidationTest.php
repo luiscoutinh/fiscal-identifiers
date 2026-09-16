@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use FiscalIdentifiers\Configuration\IdentifierResolutionConfiguration;
 use FiscalIdentifiers\Contracts\LocalValidator;
 use FiscalIdentifiers\Contracts\Normalizer;
 use FiscalIdentifiers\Countries\PT\Portugal;
@@ -15,12 +16,15 @@ use FiscalIdentifiers\IdentifierType;
 use FiscalIdentifiers\Registry\CountryRegistry;
 use FiscalIdentifiers\Validation\RegexValidator;
 
-function portugalValidator(): FiscalIdentifierValidator
+function portugalValidator(?IdentifierResolutionConfiguration $configuration = null): FiscalIdentifierValidator
 {
     $countries = new CountryRegistry();
     $countries->register(Portugal::definition());
 
-    return new FiscalIdentifierValidator($countries);
+    return new FiscalIdentifierValidator(
+        $countries,
+        $configuration ?? new IdentifierResolutionConfiguration(),
+    );
 }
 
 test('normalizes and accepts a checksum-consistent Portuguese NIF using the country default type', function (): void {
@@ -37,10 +41,28 @@ test('normalizes and accepts a checksum-consistent Portuguese NIF using the coun
         ->and($result->toArray()['supported'])->toBeTrue();
 });
 
-test('accepts an explicit jurisdiction-scoped identifier type', function (): void {
-    $result = portugalValidator()->validate('PT', '999999990', ' NIF ');
+test('resolves Portuguese identifiers by subject', function (): void {
+    $person = portugalValidator()->validateFor('PT', '999999990', 'person');
+    $company = portugalValidator()->validateFor('PT', '500000000', 'company');
 
-    expect($result->isAccepted())->toBeTrue();
+    expect($person->isAccepted())->toBeTrue()
+        ->and($company->isAccepted())->toBeTrue();
+});
+
+test('uses company NIPC when company is configured as the default subject', function (): void {
+    $validator = portugalValidator(new IdentifierResolutionConfiguration(defaultSubject: 'company'));
+    $result = $validator->validate('PT', '500 000 000');
+
+    expect($result->normalized)->toBe('500000000')
+        ->and($result->isAccepted())->toBeTrue();
+});
+
+test('accepts explicit Portuguese NIF and NIPC identifier types', function (): void {
+    $nif = portugalValidator()->validate('PT', '999999990', ' NIF ');
+    $nipc = portugalValidator()->validate('PT', '500000000', ' NIPC ');
+
+    expect($nif->isAccepted())->toBeTrue()
+        ->and($nipc->isAccepted())->toBeTrue();
 });
 
 test('rejects invalid format and checksum', function (): void {
@@ -143,6 +165,7 @@ test('validates supporting Portuguese building blocks', function (): void {
     expect($normalizer->normalize('999999990'))->toBe('999999990')
         ->and($checksum->validate('invalid'))->toBeFalse()
         ->and($checksum->validate('999999990'))->toBeTrue()
+        ->and($checksum->validate('500000000'))->toBeTrue()
         ->and($regex->validate('123'))->toBeTrue()
         ->and($regex->validate('abc'))->toBeFalse()
         ->and(fn () => new RegexValidator('/[/'))->toThrow(\InvalidArgumentException::class);
