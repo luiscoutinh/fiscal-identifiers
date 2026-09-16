@@ -5,13 +5,13 @@
 
   <text x="24" y="91" fill="#8c959f" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif" font-size="12">Lines</text>
   <text x="24" y="114" fill="#f0f6fc" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif" font-size="18" font-weight="600">100.00%</text>
-  <text x="95" y="114" fill="#8c959f" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif" font-size="12">86 / 86</text>
+  <text x="95" y="114" fill="#8c959f" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif" font-size="12">125 / 125</text>
 
   <text x="230" y="91" fill="#8c959f" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif" font-size="12">Methods</text>
   <text x="230" y="114" fill="#f0f6fc" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif" font-size="18" font-weight="600">100.00%</text>
-  <text x="301" y="114" fill="#8c959f" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif" font-size="12">17 / 17</text>
+  <text x="301" y="114" fill="#8c959f" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif" font-size="12">21 / 21</text>
 
   <text x="436" y="91" fill="#8c959f" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif" font-size="12">Classes</text>
   <text x="436" y="114" fill="#f0f6fc" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif" font-size="18" font-weight="600">100.00%</text>
-  <text x="507" y="114" fill="#8c959f" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif" font-size="12">10 / 10</text>
+  <text x="507" y="114" fill="#8c959f" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif" font-size="12">11 / 11</text>
 </svg>
