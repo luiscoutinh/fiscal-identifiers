@@ -1,6 +1,6 @@
 # Fiscal Identifiers
 
-[![CI](https://github.com/luiscoutinh/fiscal-identifiers/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/luiscoutinh/fiscal-identifiers/actions/workflows/ci.yml) [![Coverage](.github/coverage/coverage.svg)](https://github.com/luiscoutinh/fiscal-identifiers/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![CI](https://github.com/luiscoutinh/fiscal-identifiers/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/luiscoutinh/fiscal-identifiers/actions/workflows/ci.yml) [![Coverage](https://raw.githubusercontent.com/luiscoutinh/fiscal-identifiers/coverage-badges/coverage.svg)](https://github.com/luiscoutinh/fiscal-identifiers/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 A framework-agnostic PHP core being developed for fiscal identifier normalization
 and validation across jurisdictions.
@@ -149,7 +149,7 @@ matrix.
 
 ## Code coverage
 
-[![Code coverage summary](.github/coverage/coverage-summary.svg)](https://github.com/luiscoutinh/fiscal-identifiers/actions/workflows/ci.yml)
+[![Code coverage summary](https://raw.githubusercontent.com/luiscoutinh/fiscal-identifiers/coverage-badges/coverage-summary.svg)](https://github.com/luiscoutinh/fiscal-identifiers/actions/workflows/ci.yml)
 
 Coverage measures executable line coverage for all production code under `src/`.
 The project currently enforces **100% line coverage** through `composer test:coverage`;
@@ -163,15 +163,17 @@ CI quality job, so no additional test run and no external reporting service such
 Codecov or Coveralls is required.
 
 After a successful trusted `main` CI run, a separate presentation workflow renders
-`.github/coverage/coverage.svg`, `coverage-summary.svg` and `coverage.json`. The
-automated update uses GitHub's `[skip ci]` marker to avoid CI loops. Raw Clover and
-HTML reports remain available as workflow artifacts for 30 days.
+`coverage.svg`, `coverage-summary.svg` and `coverage.json` and publishes only those
+presentation assets to the dedicated `coverage-badges` branch. Because the package
+repository is public, the README can render those raw branch assets directly. This
+keeps generated coverage commits out of `main`, avoids CI loops, and remains
+independent of future `main` branch-protection rules. Raw Clover and HTML reports
+remain available as workflow artifacts for 30 days.
 
 ```text
 src/                    Core source (FiscalIdentifiers\)
 tests/                  Pest test suite
 .github/workflows/      CI checks and coverage presentation
-.github/coverage/       Latest main-branch coverage badge and summary
 composer.json           Package metadata, autoloading and development commands
 phpstan.neon            Static analysis configuration
 phpunit.xml             Test suite and coverage source configuration
