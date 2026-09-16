@@ -1,11 +1,32 @@
 # Brazil (`BR`)
 
-Brazil currently exposes two local identifier types and intentionally has no default type:
+Brazil exposes two local identifier types:
 
 - `cpf` — Cadastro de Pessoas Físicas
 - `cnpj` — Cadastro Nacional da Pessoa Jurídica
 
-Callers must therefore provide the identifier type explicitly.
+The jurisdiction also declares subject-to-type mappings:
+
+- `person` -> `cpf`
+- `company` -> `cnpj`
+
+There is intentionally no unconditional country-level default because CPF and CNPJ are different schemes. Applications that predominantly work with one subject kind can configure a default subject globally. For example, a business-oriented application can use `company`, causing an omitted identifier type for `BR` to resolve to `cnpj`.
+
+```php
+use FiscalIdentifiers\Configuration\IdentifierResolutionConfiguration;
+use FiscalIdentifiers\FiscalIdentifierValidator;
+
+$validator = new FiscalIdentifierValidator(
+    $countries,
+    new IdentifierResolutionConfiguration(defaultSubject: 'company'),
+);
+
+$validator->validate('BR', '12.ABC.345/01DE-35');        // resolves to cnpj
+$validator->validateFor('BR', '999.999.990-50', 'person'); // resolves to cpf
+$validator->validate('BR', '999.999.990-50', 'cpf');       // explicit low-level type
+```
+
+Explicit identifier type always remains available and is the precise API when subject alone is not enough to identify a scheme.
 
 ## CPF
 
