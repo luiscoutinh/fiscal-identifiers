@@ -5,11 +5,10 @@ declare(strict_types=1);
 namespace FiscalIdentifiers\Results;
 
 use FiscalIdentifiers\Enums\ValidationDecision;
-use FiscalIdentifiers\Enums\ValidationStatus;
 
 final readonly class ValidationResult
 {
-    /** @param array<string, ValidationStepResult|ExternalVerificationResult> $steps */
+    /** @param array<string, ValidationStepResult> $steps */
     public function __construct(
         public string $countryCode,
         public string $original,
@@ -22,12 +21,6 @@ final readonly class ValidationResult
     public function isAccepted(): bool
     {
         return $this->decision === ValidationDecision::Accepted;
-    }
-
-    public function isVerified(): bool
-    {
-        return isset($this->steps['external'])
-            && $this->steps['external']->status === ValidationStatus::Passed;
     }
 
     public function toConfiguredValue(mixed $accepted = true, mixed $rejected = false): mixed
@@ -43,10 +36,9 @@ final readonly class ValidationResult
             'original' => $this->original,
             'normalized' => $this->normalized,
             'accepted' => $this->isAccepted(),
-            'verified' => $this->isVerified(),
             'decision' => $this->decision->value,
             'steps' => array_map(
-                static fn (ValidationStepResult|ExternalVerificationResult $step): array => [
+                static fn (ValidationStepResult $step): array => [
                     'status' => $step->status->value,
                     'message' => $step->message,
                 ],
