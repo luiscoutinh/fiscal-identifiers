@@ -23,9 +23,21 @@ final readonly class ValidationResult
         return $this->decision === ValidationDecision::Accepted;
     }
 
-    public function toConfiguredValue(mixed $accepted = true, mixed $rejected = false): mixed
+    public function isSupported(): bool
     {
-        return $this->isAccepted() ? $accepted : $rejected;
+        return $this->decision !== ValidationDecision::NotSupported;
+    }
+
+    public function toConfiguredValue(
+        mixed $accepted = true,
+        mixed $rejected = false,
+        mixed $unsupported = null,
+    ): mixed {
+        return match ($this->decision) {
+            ValidationDecision::Accepted => $accepted,
+            ValidationDecision::Rejected => $rejected,
+            ValidationDecision::NotSupported => $unsupported,
+        };
     }
 
     /** @return array<string, mixed> */
@@ -36,6 +48,7 @@ final readonly class ValidationResult
             'original' => $this->original,
             'normalized' => $this->normalized,
             'accepted' => $this->isAccepted(),
+            'supported' => $this->isSupported(),
             'decision' => $this->decision->value,
             'steps' => array_map(
                 static fn (ValidationStepResult $step): array => [

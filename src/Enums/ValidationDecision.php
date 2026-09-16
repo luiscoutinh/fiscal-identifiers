@@ -8,4 +8,5 @@ enum ValidationDecision: string
 {
     case Accepted = 'accepted';
     case Rejected = 'rejected';
+    case NotSupported = 'not_supported';
 }

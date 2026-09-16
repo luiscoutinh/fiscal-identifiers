@@ -5,11 +5,11 @@
 A framework-agnostic PHP core being developed for fiscal identifier normalization
 and validation across jurisdictions.
 
-> **Status: early development.** The core API and the first Portuguese VAT-oriented
-> local validator are implemented. Portugal currently supports normalization, format
-> and NIF checksum validation. Authoritative registry checks such as VIES are
-> deliberately outside the validation pipeline. The public API may still change
-> before the first stable release.
+> **Status: early development.** The core API and the first Portuguese NIF validator
+> are implemented. Portugal currently supports normalization, format and NIF checksum
+> validation. Authoritative registry checks such as VIES are deliberately outside
+> the validation pipeline. The public API may still change before the first stable
+> release.
 
 ## What is a fiscal identifier?
 
@@ -30,6 +30,21 @@ the identifier string. One entity can have several identifiers and registrations
 Country prefixes are scheme-specific; they should not be treated as a universal
 country-detection mechanism. See the [OECD's jurisdiction-specific TIN guidance](https://www.oecd.org/en/networks/global-forum-tax-transparency/resources/aeoi-implementation-portal/tax-identification-numbers.html)
 and the [European Commission's VAT identification overview](https://taxation-customs.ec.europa.eu/taxation/vat/vat-directive/vat-identification-numbers_en).
+
+## Jurisdictions and identifier types
+
+Jurisdiction context is explicit. Country codes are normalized to uppercase and
+validated against ISO 3166-1 alpha-2 data provided by `symfony/intl`. An unknown
+country code such as `XX` is invalid input. A real ISO jurisdiction for which the
+package has no definition, such as `AF`, is instead reported as `not_supported`.
+Unsupported therefore never means either valid or invalid.
+
+Identifier types are jurisdiction-scoped string values rather than members of a
+global closed enum. This lets jurisdictions introduce their own schemes — for
+example `nif`, `cpf`, `cnpj`, `ein`, `abn` or `nie` — without requiring every type
+in the world to be hardcoded into the package core. A country definition may expose
+a default type when that is unambiguous; otherwise callers must supply the type
+explicitly.
 
 ## Validation is a sequence of local questions
 
@@ -80,22 +95,23 @@ Portuguese TINs have nine digits, including a final check digit.
 See the [OECD Portugal TIN sheet](https://www.oecd.org/content/dam/oecd/en/topics/policy-issue-focus/aeoi/portugal-tin.pdf)
 and the [Portuguese guidance on NIPC](https://www.dgo.gov.pt/instrucoes/Instrucoes/ca1410.pdf).
 
-For a Portuguese VAT-form identifier, the `PT` prefix can accompany the domestic
-nine-digit number. The current local validation sequence is:
+Portugal currently exposes `nif` as its default local identifier type. The
+normalizer accepts the optional `PT` presentation prefix and produces the domestic
+nine-digit value before validation. The current local validation sequence is:
 
 ```text
-Input + explicit context: Portugal, VAT-oriented local validation
+Input + explicit context: Portugal, NIF
     -> apply the normalization policy
     -> check exactly nine ASCII digits after normalization
     -> verify the domestic check digit
 ```
 
 For example, `/\A[0-9]{9}\z/` describes only the basic domestic shape;
-`/\APT[0-9]{9}\z/` describes only the prefixed shape. Neither regex validates
-the checksum or registration. `PT123456789` is an illustrative string that fits
-the latter pattern; it is **not** presented as a valid or assigned identifier.
-The local checksum calculation compares a derived control digit with the final
-digit. Passing it establishes mathematical plausibility, not assignment.
+`/\APT[0-9]{9}\z/` describes only the prefixed presentation shape. Neither regex
+validates the checksum or registration. `PT123456789` is an illustrative string
+that fits the latter pattern; it is **not** presented as a valid or assigned
+identifier. The local checksum calculation compares a derived control digit with
+the final digit. Passing it establishes mathematical plausibility, not assignment.
 
 VIES, when supported in the future, will be documented and exposed as a separate
 registry-verification capability rather than as a step in this local validation
@@ -103,9 +119,9 @@ sequence. See [Your Europe's explanation of VIES results](https://europa.eu/your
 
 ## Current API — early development
 
-The package exposes the local validation core, but the API is not considered
-stable yet. Applications explicitly register country definitions and inspect the
-validation decision and individual local steps.
+The package exposes the local validation core, but the API is not considered stable
+yet. Applications explicitly register country definitions and inspect support,
+validation decisions and individual local steps separately.
 
 ```php
 use FiscalIdentifiers\Countries\PT\Portugal;
@@ -117,16 +133,22 @@ $countries->register(Portugal::definition());
 
 $validator = new FiscalIdentifierValidator($countries);
 
-$result = $validator->validate('PT', 'PT 123 456 789');
+$result = $validator->validate('PT', 'PT 999 999 990');
 
-$result->isAccepted(); // local validation decision
-$result->toArray();    // normalization / format / checksum details
+$result->isSupported(); // true
+$result->isAccepted();  // local validation decision
+$result->toArray();     // normalization / format / checksum details
+
+$explicit = $validator->validate('PT', '999999990', 'nif');
+$unsupported = $validator->validate('AF', '123');
+
+$unsupported->isSupported(); // false
 ```
 
-No network request or registry lookup is performed by `validate()`. If an
-application later needs an authoritative status, it should request that explicitly
-through a dedicated verification integration rather than infer it from the local
-validation result.
+Unknown ISO codes such as `XX` are rejected as invalid input. A valid country or
+identifier type for which the package has no implementation returns a
+`not_supported` decision rather than pretending validation succeeded. No network
+request or registry lookup is performed by `validate()`.
 
 ## Development setup
 

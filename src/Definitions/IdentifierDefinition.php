@@ -6,7 +6,7 @@ namespace FiscalIdentifiers\Definitions;
 
 use FiscalIdentifiers\Contracts\LocalValidator;
 use FiscalIdentifiers\Contracts\Normalizer;
-use FiscalIdentifiers\Enums\IdentifierType;
+use FiscalIdentifiers\IdentifierType;
 
 final readonly class IdentifierDefinition
 {

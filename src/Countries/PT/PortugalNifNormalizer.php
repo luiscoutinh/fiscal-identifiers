@@ -6,7 +6,7 @@ namespace FiscalIdentifiers\Countries\PT;
 
 use FiscalIdentifiers\Contracts\Normalizer;
 
-final class PortugalVatNormalizer implements Normalizer
+final class PortugalNifNormalizer implements Normalizer
 {
     public function normalize(string $value): string
     {

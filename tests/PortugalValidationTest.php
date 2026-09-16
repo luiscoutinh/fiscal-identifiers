@@ -6,12 +6,12 @@ use FiscalIdentifiers\Contracts\LocalValidator;
 use FiscalIdentifiers\Contracts\Normalizer;
 use FiscalIdentifiers\Countries\PT\Portugal;
 use FiscalIdentifiers\Countries\PT\PortugalNifChecksumValidator;
-use FiscalIdentifiers\Countries\PT\PortugalVatNormalizer;
+use FiscalIdentifiers\Countries\PT\PortugalNifNormalizer;
 use FiscalIdentifiers\Definitions\CountryDefinition;
 use FiscalIdentifiers\Definitions\IdentifierDefinition;
-use FiscalIdentifiers\Enums\IdentifierType;
 use FiscalIdentifiers\Enums\ValidationStatus;
 use FiscalIdentifiers\FiscalIdentifierValidator;
+use FiscalIdentifiers\IdentifierType;
 use FiscalIdentifiers\Registry\CountryRegistry;
 use FiscalIdentifiers\Validation\RegexValidator;
 
@@ -23,19 +23,24 @@ function portugalValidator(): FiscalIdentifierValidator
     return new FiscalIdentifierValidator($countries);
 }
 
-test('normalizes and accepts a checksum-consistent Portuguese identifier', function (): void {
-    $result = portugalValidator()->validate('pt', ' PT 999.999-990 ');
+test('normalizes and accepts a checksum-consistent Portuguese NIF using the country default type', function (): void {
+    $result = portugalValidator()->validate(' pt ', ' PT 999.999-990 ');
 
     expect($result->normalized)->toBe('999999990')
         ->and($result->isAccepted())->toBeTrue()
+        ->and($result->isSupported())->toBeTrue()
         ->and($result->steps['normalization']->status)->toBe(ValidationStatus::Passed)
         ->and($result->steps['format']->status)->toBe(ValidationStatus::Passed)
         ->and($result->steps['checksum']->status)->toBe(ValidationStatus::Passed)
-        ->and($result->toConfiguredValue('valid', 'invalid'))->toBe('valid')
-        ->and($result->toConfiguredValue(1, 0))->toBe(1)
+        ->and($result->toConfiguredValue('valid', 'invalid', 'unsupported'))->toBe('valid')
         ->and($result->toArray()['decision'])->toBe('accepted')
-        ->and($result->toArray())->not->toHaveKey('verified')
-        ->and($result->toArray()['steps'])->not->toHaveKey('external');
+        ->and($result->toArray()['supported'])->toBeTrue();
+});
+
+test('accepts an explicit jurisdiction-scoped identifier type', function (): void {
+    $result = portugalValidator()->validate('PT', '999999990', ' NIF ');
+
+    expect($result->isAccepted())->toBeTrue();
 });
 
 test('rejects invalid format and checksum', function (): void {
@@ -43,27 +48,40 @@ test('rejects invalid format and checksum', function (): void {
     $checksum = portugalValidator()->validate('PT', '999999991');
 
     expect($format->isAccepted())->toBeFalse()
-        ->and($format->toConfiguredValue('valid', 'invalid'))->toBe('invalid')
+        ->and($format->isSupported())->toBeTrue()
+        ->and($format->toConfiguredValue('valid', 'invalid', 'unsupported'))->toBe('invalid')
         ->and($format->steps['format']->status)->toBe(ValidationStatus::Failed)
         ->and($checksum->isAccepted())->toBeFalse()
         ->and($checksum->steps['checksum']->status)->toBe(ValidationStatus::Failed);
 });
 
-test('represents unsupported validation without pretending that checks ran', function (): void {
+test('distinguishes a valid unsupported jurisdiction from an invalid country code', function (): void {
     $validator = new FiscalIdentifierValidator(new CountryRegistry());
-    $result = $validator->validate('AF', ' 123 ');
+    $unsupported = $validator->validate('AF', ' 123 ');
 
-    expect($result->isAccepted())->toBeTrue()
-        ->and($result->normalized)->toBe('123')
-        ->and($result->steps['format']->status)->toBe(ValidationStatus::NotSupported)
-        ->and($result->steps['checksum']->status)->toBe(ValidationStatus::NotSupported);
+    expect($unsupported->isAccepted())->toBeFalse()
+        ->and($unsupported->isSupported())->toBeFalse()
+        ->and($unsupported->normalized)->toBe('123')
+        ->and($unsupported->toConfiguredValue('valid', 'invalid', 'unsupported'))->toBe('unsupported')
+        ->and($unsupported->toArray()['decision'])->toBe('not_supported')
+        ->and($unsupported->steps['format']->status)->toBe(ValidationStatus::NotSupported)
+        ->and($unsupported->steps['checksum']->status)->toBe(ValidationStatus::NotSupported)
+        ->and(fn () => $validator->validate('XX', '123'))->toThrow(\InvalidArgumentException::class);
 });
 
-test('supports definitions without checksum validation', function (): void {
+test('represents a valid country with an unsupported identifier type as not supported', function (): void {
+    $result = portugalValidator()->validate('PT', '999999990', 'vat');
+
+    expect($result->isSupported())->toBeFalse()
+        ->and($result->isAccepted())->toBeFalse();
+});
+
+test('supports extensible identifier types and definitions without checksum validation', function (): void {
+    $ein = IdentifierType::from('ein');
     $countries = new CountryRegistry();
-    $countries->register(new CountryDefinition('US', [
-        IdentifierType::BusinessTax->value => new IdentifierDefinition(
-            IdentifierType::BusinessTax,
+    $countries->register(new CountryDefinition(' us ', [
+        $ein->value => new IdentifierDefinition(
+            $ein,
             new class () implements Normalizer {
                 public function normalize(string $value): string
                 {
@@ -77,18 +95,48 @@ test('supports definitions without checksum validation', function (): void {
                 }
             },
         ),
-    ]));
+    ], defaultIdentifierType: 'ein'));
 
-    $result = (new FiscalIdentifierValidator($countries))
-        ->validate('us', ' 123 ', IdentifierType::BusinessTax);
+    $result = (new FiscalIdentifierValidator($countries))->validate('us', ' 123 ', $ein);
 
     expect($result->isAccepted())->toBeTrue()
         ->and($result->steps['format']->status)->toBe(ValidationStatus::Passed)
         ->and($result->steps['checksum']->status)->toBe(ValidationStatus::NotSupported);
 });
 
-test('validates supporting building blocks and invalid country definitions', function (): void {
-    $normalizer = new PortugalVatNormalizer();
+test('requires explicit identifier context when a country has no default type', function (): void {
+    $ein = IdentifierType::from('ein');
+    $definition = new IdentifierDefinition(
+        $ein,
+        new class () implements Normalizer {
+            public function normalize(string $value): string
+            {
+                return trim($value);
+            }
+        },
+        new RegexValidator('/^\d+$/'),
+    );
+    $country = new CountryDefinition('US', ['ein' => $definition]);
+
+    expect(fn () => $country->identifier())->toThrow(\InvalidArgumentException::class);
+});
+
+test('rejects inconsistent country definitions and malformed identifier type keys', function (): void {
+    $ein = IdentifierType::from('ein');
+    $definition = new IdentifierDefinition(
+        $ein,
+        new PortugalNifNormalizer(),
+        new RegexValidator('/^\d+$/'),
+    );
+
+    expect(fn () => IdentifierType::from('VAT number'))->toThrow(\InvalidArgumentException::class)
+        ->and(fn () => new CountryDefinition('XX', []))->toThrow(\InvalidArgumentException::class)
+        ->and(fn () => new CountryDefinition('US', ['wrong' => $definition]))->toThrow(\InvalidArgumentException::class)
+        ->and(fn () => new CountryDefinition('US', ['ein' => $definition], 'vat'))->toThrow(\InvalidArgumentException::class);
+});
+
+test('validates supporting Portuguese building blocks', function (): void {
+    $normalizer = new PortugalNifNormalizer();
     $checksum = new PortugalNifChecksumValidator();
     $regex = new RegexValidator('/^\d+$/');
 
@@ -97,6 +145,5 @@ test('validates supporting building blocks and invalid country definitions', fun
         ->and($checksum->validate('999999990'))->toBeTrue()
         ->and($regex->validate('123'))->toBeTrue()
         ->and($regex->validate('abc'))->toBeFalse()
-        ->and(fn () => new RegexValidator('/[/'))->toThrow(\InvalidArgumentException::class)
-        ->and(fn () => new CountryDefinition('XX', []))->toThrow(\InvalidArgumentException::class);
+        ->and(fn () => new RegexValidator('/[/'))->toThrow(\InvalidArgumentException::class);
 });
