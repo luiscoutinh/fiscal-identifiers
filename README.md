@@ -2,161 +2,228 @@
 
 [![CI](https://github.com/luiscoutinh/fiscal-identifiers/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/luiscoutinh/fiscal-identifiers/actions/workflows/ci.yml) [![Coverage](https://raw.githubusercontent.com/luiscoutinh/fiscal-identifiers/coverage-badges/coverage.svg)](https://github.com/luiscoutinh/fiscal-identifiers/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-A framework-agnostic PHP core being developed for fiscal identifier normalization
-and validation across jurisdictions.
+A framework-agnostic PHP library for normalizing and validating fiscal identifiers across jurisdictions.
 
-> **Status: early development.** The core API and the first Portuguese NIF validator
-> are implemented. Portugal currently supports normalization, format and NIF checksum
-> validation. Authoritative registry checks such as VIES are deliberately outside
-> the validation pipeline. The public API may still change before the first stable
-> release.
+> **Status: early development.** Portugal, Brazil, Spain and Germany are currently implemented. The public API may still change before the first stable release. Validation is deterministic and local; authoritative registry checks such as VIES are deliberately kept outside the validation pipeline.
 
-## What is a fiscal identifier?
+## Why this package exists
 
-"Fiscal identifier" is an umbrella term used here for identifiers relevant to tax
-administration. Names alone do not determine their purpose or validation rules.
+A fiscal identifier is not one universal thing. Different jurisdictions distinguish between people, companies, VAT registrations, local tax-office identifiers and other schemes. Even within the same country, one subject can have several identifiers with different purposes.
 
-| Term | Meaning and relationship |
-| --- | --- |
-| **Tax number** | An informal, broad label for a number used in a tax context. It may mean a general taxpayer identifier or a particular tax registration. |
-| **TIN — Tax Identification Number** | An identifier used by a jurisdiction to identify taxpayers. Issuance, structure and use differ for individuals and entities; some jurisdictions use functional equivalents. |
-| **VAT number / VAT identification number** | Identifies a registration for value-added tax. It can reuse a domestic TIN, add a prefix, or follow a separate scheme. A TIN does not automatically imply VAT registration. |
-| **GST identifier** | An identifier used for goods and services tax in jurisdictions using that system. It is not automatically interchangeable with a TIN or an EU VAT number. |
-| **Business or company registration number** | Identifies a legal entity in a business register. It may coincide with a tax identifier in a jurisdiction, but that relationship is not universal. |
-| **Employer, payroll, social security or customs identifier** | Identifies another administrative role or registration. These schemes can overlap with tax administration without being interchangeable. |
-
-Always retain the **jurisdiction, identifier type and intended use**, alongside
-the identifier string. One entity can have several identifiers and registrations.
-Country prefixes are scheme-specific; they should not be treated as a universal
-country-detection mechanism. See the [OECD's jurisdiction-specific TIN guidance](https://www.oecd.org/en/networks/global-forum-tax-transparency/resources/aeoi-implementation-portal/tax-identification-numbers.html)
-and the [European Commission's VAT identification overview](https://taxation-customs.ec.europa.eu/taxation/vat/vat-directive/vat-identification-numbers_en).
-
-## Jurisdictions and identifier types
-
-Jurisdiction context is explicit. Country codes are normalized to uppercase and
-validated against ISO 3166-1 alpha-2 data provided by `symfony/intl`. An unknown
-country code such as `XX` is invalid input. A real ISO jurisdiction for which the
-package has no definition, such as `AF`, is instead reported as `not_supported`.
-Unsupported therefore never means either valid or invalid.
-
-Identifier types are jurisdiction-scoped string values rather than members of a
-global closed enum. This lets jurisdictions introduce their own schemes — for
-example `nif`, `cpf`, `cnpj`, `ein`, `abn` or `nie` — without requiring every type
-in the world to be hardcoded into the package core. A country definition may expose
-a default type when that is unambiguous; otherwise callers must supply the type
-explicitly.
-
-## Validation is a sequence of local questions
-
-| Layer | Question | What a pass does **not** establish |
-| --- | --- | --- |
-| **Normalization** | Can permitted presentation differences be converted into a canonical string, such as trimming outer spaces or uppercasing an allowed prefix? | That the input was valid. Do not silently remove arbitrary characters, convert letters into digits or lose leading zeroes. |
-| **Format / regex** | Does the input use the allowed characters and basic pattern? | That the number satisfies a checksum, has been assigned or is active. |
-| **Length / structure** | Are the length, prefix and component positions correct for this scheme? | That the component values are semantically permitted. Regex may cover some of this layer. |
-| **Checksum / check digit** | Does the control digit agree with the scheme's calculation? | Existence or ownership. A checksum helps detect some transcription errors; it is not authentication. |
-| **Semantic / jurisdiction rules** | Are identifier categories, reserved ranges or other contextual rules permitted under the relevant rules? | Current registration. Rules may depend on identifier type and date. |
-
-Not every scheme has every layer or a checksum. Normalization policies must be
-explicit, and an unsupported scheme must not be reported as invalid merely because
-it is unsupported. The validation result describes only the deterministic/local
-checks that the package actually performed.
-
-## Validation and authoritative verification are different concerns
-
-This package treats these as two separate questions:
+This package therefore keeps four concepts separate:
 
 ```text
-Validation
-  "Does this identifier conform to the known rules for this jurisdiction/type?"
-
-Authoritative verification
-  "Does an external authority or registry confirm a specific registration or status?"
+country
+  -> subject
+      -> identifier type
+          -> optional category
 ```
 
-An authoritative lookup must not silently change the meaning of local validation.
-A registry can answer a narrower question than "does this fiscal identifier exist?".
-For example, VIES concerns the relevant intra-EU VAT registration status; a negative
-VIES result is not the same statement as "this domestic tax identifier is
-structurally invalid".
+- **Country** identifies the jurisdiction, using ISO 3166-1 alpha-2 codes such as `PT`, `BR`, `ES` or `DE`.
+- **Subject** describes who or what is being identified, such as `person` or `company`.
+- **Identifier type** is the concrete fiscal scheme, such as `nif`, `cnpj`, `nie` or `ust_idnr`.
+- **Category** is an optional jurisdiction-specific subdivision encoded inside an identifier, such as the Spanish entity-class letter `B`.
 
-Future integrations may therefore expose explicit operations such as a VIES
-registration check or a jurisdiction-specific authority lookup, where a suitable
-official service exists. Those integrations belong to a separate verification
-layer with their own statuses and semantics; they are not validation steps and do
-not participate in the current `FiscalIdentifierValidator` decision.
+Subjects are a convenience layer. They do not replace identifier types. A country may map `company` to one general identifier while still exposing additional purpose-specific identifiers explicitly.
 
-## Portugal: NIF, NIPC and intra-EU VAT
+## Supported jurisdictions
 
-**NIF** means *Número de Identificação Fiscal*. **NIPC** means *Número de
-Identificação de Pessoa Coletiva* and is used for legal entities; it also serves
-as their fiscal identifier in the relevant Portuguese context. These are related
-administrative concepts, not two interchangeable labels for every person.
-Portuguese TINs have nine digits, including a final check digit.
-See the [OECD Portugal TIN sheet](https://www.oecd.org/content/dam/oecd/en/topics/policy-issue-focus/aeoi/portugal-tin.pdf)
-and the [Portuguese guidance on NIPC](https://www.dgo.gov.pt/instrucoes/Instrucoes/ca1410.pdf).
+| Country | Subject resolution | Identifier types | Notes |
+| --- | --- | --- | --- |
+| **Portugal (`PT`)** | `person -> nif`, `company -> nipc` | `nif`, `nipc` | Both use the Portuguese nine-digit local format/checksum. |
+| **Brazil (`BR`)** | `person -> cpf`, `company -> cnpj` | `cpf`, `cnpj` | CNPJ supports both numeric and current alphanumeric forms. |
+| **Spain (`ES`)** | `company -> entity_nif`; generic `person` is intentionally ambiguous | `dni_nif`, `nie`, `entity_nif` | Entity NIF exposes the official entity-class letter as an optional category. |
+| **Germany (`DE`)** | `person -> idnr`, `company -> widnr` | `idnr`, `widnr`, `ust_idnr`, `steuernummer` | One company can have several identifiers with different purposes. |
 
-Portugal currently exposes `nif` as its default local identifier type. The
-normalizer accepts the optional `PT` presentation prefix and produces the domestic
-nine-digit value before validation. The current local validation sequence is:
+Detailed jurisdiction notes and authoritative sources live under [`docs/jurisdictions`](docs/jurisdictions/README.md).
 
-```text
-Input + explicit context: Portugal, NIF
-    -> apply the normalization policy
-    -> check exactly nine ASCII digits after normalization
-    -> verify the domestic check digit
-```
+## Core API
 
-For example, `/\A[0-9]{9}\z/` describes only the basic domestic shape;
-`/\APT[0-9]{9}\z/` describes only the prefixed presentation shape. Neither regex
-validates the checksum or registration. `PT123456789` is an illustrative string
-that fits the latter pattern; it is **not** presented as a valid or assigned
-identifier. The local checksum calculation compares a derived control digit with
-the final digit. Passing it establishes mathematical plausibility, not assignment.
-
-VIES, when supported in the future, will be documented and exposed as a separate
-registry-verification capability rather than as a step in this local validation
-sequence. See [Your Europe's explanation of VIES results](https://europa.eu/youreurope/business/finance-and-tax/vat/check-vat-number-vies/index_en.htm).
-
-## Current API — early development
-
-The package exposes the local validation core, but the API is not considered stable
-yet. Applications explicitly register country definitions and inspect support,
-validation decisions and individual local steps separately.
+Applications register the country definitions they need and then validate either by explicit identifier type or by subject.
 
 ```php
+use FiscalIdentifiers\Countries\BR\Brazil;
+use FiscalIdentifiers\Countries\DE\Germany;
+use FiscalIdentifiers\Countries\ES\Spain;
 use FiscalIdentifiers\Countries\PT\Portugal;
 use FiscalIdentifiers\FiscalIdentifierValidator;
 use FiscalIdentifiers\Registry\CountryRegistry;
 
 $countries = new CountryRegistry();
 $countries->register(Portugal::definition());
+$countries->register(Brazil::definition());
+$countries->register(Spain::definition());
+$countries->register(Germany::definition());
 
 $validator = new FiscalIdentifierValidator($countries);
-
-$result = $validator->validate('PT', 'PT 999 999 990');
-
-$result->isSupported(); // true
-$result->isAccepted();  // local validation decision
-$result->toArray();     // normalization / format / checksum details
-
-$explicit = $validator->validate('PT', '999999990', 'nif');
-$unsupported = $validator->validate('AF', '123');
-
-$unsupported->isSupported(); // false
 ```
 
-Unknown ISO codes such as `XX` are rejected as invalid input. A valid country or
-identifier type for which the package has no implementation returns a
-`not_supported` decision rather than pretending validation succeeded. No network
-request or registry lookup is performed by `validate()`.
+### Validate an explicit identifier type
+
+Use `validate()` with an identifier type when you know exactly which scheme the value belongs to:
+
+```php
+$result = $validator->validate('BR', $value, 'cnpj');
+$result = $validator->validate('ES', $value, 'nie');
+$result = $validator->validate('DE', $value, 'ust_idnr');
+```
+
+This is the precise, low-level API.
+
+### Validate by subject
+
+Use `validateFor()` when the jurisdiction has an unambiguous mapping for that subject:
+
+```php
+$result = $validator->validateFor(
+    countryCode: 'BR',
+    value: $value,
+    subject: 'company',
+); // resolves to cnpj
+```
+
+For Portugal:
+
+```php
+$validator->validateFor('PT', $value, 'person');  // nif
+$validator->validateFor('PT', $value, 'company'); // nipc
+```
+
+Spain deliberately does **not** map generic `person` to one identifier type because natural persons may use different schemes such as DNI-based NIF or NIE. In that situation, callers must choose the identifier type explicitly.
+
+### Restrict an optional category
+
+Some identifier schemes encode a meaningful jurisdiction-specific category. Spain's entity NIF is one example: its first letter identifies an entity class.
+
+Without a category restriction, any supported entity category is accepted:
+
+```php
+$result = $validator->validateFor(
+    countryCode: 'ES',
+    value: $value,
+    subject: 'company',
+);
+```
+
+To require a specific official category:
+
+```php
+$result = $validator->validateFor(
+    countryCode: 'ES',
+    value: $value,
+    subject: 'company',
+    category: 'B',
+);
+```
+
+When available, the resolved category is exposed in result metadata:
+
+```php
+$result->metadata['category']; // 'B'
+```
+
+A category is a restriction on an identifier scheme; it is not a separate identifier type. If category validation is requested for a scheme that has no category model, the result is `not_supported` rather than pretending the restriction was checked.
+
+## Default subject configuration
+
+Applications that predominantly work with one kind of subject can configure a default once instead of repeating it on every validation call.
+
+```php
+use FiscalIdentifiers\Configuration\IdentifierResolutionConfiguration;
+
+$validator = new FiscalIdentifierValidator(
+    $countries,
+    new IdentifierResolutionConfiguration(defaultSubject: 'company'),
+);
+```
+
+Then:
+
+```php
+$validator->validate('BR', $cnpj);   // company -> cnpj
+$validator->validate('PT', $nipc);   // company -> nipc
+$validator->validate('ES', $nif);    // company -> entity_nif
+$validator->validate('DE', $widnr);  // company -> widnr
+```
+
+The default subject is only a resolution convenience. It does not stop callers from explicitly requesting another identifier type:
+
+```php
+$validator->validate('DE', $vatNumber, 'ust_idnr');
+```
+
+A country may also define its own fallback identifier type when that is unambiguous. Explicit identifier type always remains the clearest choice when context matters.
+
+## Validation results
+
+A validation result keeps support and acceptance separate:
+
+```php
+$result->isSupported();
+$result->isAccepted();
+$result->toArray();
+```
+
+The decision can be:
+
+- `accepted` — all implemented local checks required by that definition passed;
+- `rejected` — an implemented local rule failed;
+- `not_supported` — the requested jurisdiction, identifier type, subject/category restriction or validation layer is not implemented.
+
+Unsupported never means valid or invalid.
+
+Unknown ISO country codes such as `XX` are invalid input and raise an exception. A real ISO jurisdiction that the package does not implement, such as `AF`, returns `not_supported`.
+
+## Validation is a sequence of local questions
+
+| Layer | Question | What a pass does **not** establish |
+| --- | --- | --- |
+| **Normalization** | Can permitted presentation differences be converted into a canonical string? | That the identifier is valid. |
+| **Format / structure** | Does the value have the expected characters, length and component positions? | That a checksum or registry status is valid. |
+| **Category** | If applicable, does an encoded jurisdiction-specific category satisfy the requested restriction? | That the entity exists or is active. |
+| **Checksum / check digit** | Does the control value agree with the published deterministic calculation? | Assignment, ownership or current registration. |
+| **Semantic rules** | Are known jurisdiction-specific ranges or restrictions satisfied? | Authoritative registry status. |
+
+Not every scheme exposes every layer. If an authoritative source documents structure but not a checksum algorithm clearly enough, the package reports the checksum step as `not_supported` rather than inventing one.
+
+Normalization is deliberately conservative: it handles documented presentation differences but should not silently rewrite arbitrary malformed input, infer a country from digits, or guess an identifier type from value length.
+
+## Validation and authoritative verification are different concerns
+
+This package treats these as separate questions:
+
+```text
+Validation
+  "Does this identifier conform to the known deterministic rules for this jurisdiction and scheme?"
+
+Authoritative verification
+  "Does an external authority or registry confirm a particular assignment, registration or status?"
+```
+
+A successful checksum does not prove that an identifier exists, is active, belongs to a particular subject or has a VAT registration.
+
+Likewise, VIES is not a generic fiscal-identifier validator. It answers a narrower EU VAT-registration question. Future authority integrations therefore belong to a separate verification layer and will not silently alter the meaning of local validation.
+
+## What is a fiscal identifier?
+
+"Fiscal identifier" is an umbrella term used here for identifiers relevant to tax administration. Names alone do not determine their purpose or validation rules.
+
+| Term | Meaning and relationship |
+| --- | --- |
+| **Tax number** | Broad informal label for a number used in a tax context. |
+| **TIN — Tax Identification Number** | Identifier used by a jurisdiction to identify taxpayers; structures differ by jurisdiction and subject. |
+| **VAT number / VAT identification number** | Identifies a VAT registration. It may reuse, extend or differ from another domestic identifier. |
+| **GST identifier** | Identifier for goods and services tax in jurisdictions using that system. |
+| **Business/company registration number** | Identifies a legal entity in a business register; it is not universally the same as a tax identifier. |
+| **Employer, payroll, social security or customs identifier** | Administrative identifiers that may overlap with tax processes but remain distinct schemes. |
+
+One person or organization can therefore have several identifiers at the same time. Always retain the jurisdiction, identifier type and intended use alongside the value.
+
+See the [OECD jurisdiction-specific TIN guidance](https://www.oecd.org/en/networks/global-forum-tax-transparency/resources/aeoi-implementation-portal/tax-identification-numbers.html) and the [European Commission VAT identification overview](https://taxation-customs.ec.europa.eu/taxation/vat/vat-directive/vat-identification-numbers_en) for broader context.
 
 ## Development setup
 
-The core targets **PHP 8.3, 8.4 and 8.5**, with Composer 2 and no runtime dependency
-on a framework. PHP 8.3 is the minimum so the package can serve more than the newest
-PHP release while using Pest 4 for development. Future PHP versions will be added
-after verification; see [PHP's support calendar](https://www.php.net/supported-versions.php)
-and [Pest's requirements](https://pestphp.com/docs/installation).
+The core targets **PHP 8.3, 8.4 and 8.5**, with Composer 2 and no runtime dependency on a framework. PHP 8.3 is the minimum so the package can serve more than the newest PHP release while using Pest 4 for development.
 
 For now, work from a source checkout; this is not a claim of Packagist availability:
 
@@ -176,38 +243,22 @@ composer check
 | `composer check` | Strict Composer validation, tests, analysis and style. |
 | `composer test:coverage` | Require 100% line coverage and write Clover XML / HTML reports; enable Xdebug or PCOV first. |
 
-CI tests highest dependencies on PHP 8.3–8.5 and lowest supported dependencies on
-PHP 8.3. The quality job performs Composer validation, PHPStan and PHP-CS-Fixer,
-then runs the test suite once with PCOV to produce the coverage report. This avoids
-running the same tests twice inside the quality job while preserving the compatibility
-matrix.
+CI tests highest dependencies on PHP 8.3–8.5 and lowest supported dependencies on PHP 8.3. The quality job performs Composer validation, PHPStan and PHP-CS-Fixer, then runs the test suite once with PCOV to produce the coverage report.
 
 ## Code coverage
 
 [![Code coverage summary](https://raw.githubusercontent.com/luiscoutinh/fiscal-identifiers/coverage-badges/coverage-summary.svg)](https://github.com/luiscoutinh/fiscal-identifiers/actions/workflows/ci.yml)
 
-Coverage measures executable line coverage for all production code under `src/`.
-The project currently enforces **100% line coverage** through `composer test:coverage`;
-a coverage regression therefore fails CI immediately rather than merely changing a
-badge.
+Coverage measures executable line coverage for all production code under `src/`. The project currently enforces **100% line coverage** through `composer test:coverage`; a coverage regression therefore fails CI immediately rather than merely changing a badge.
 
-The badge and summary card track the latest successful `main` measurement. Line
-coverage is the primary gate, while method and class coverage are shown as supporting
-diagnostics. Metrics are generated from the Clover report produced by the existing
-CI quality job, so no additional test run and no external reporting service such as
-Codecov or Coveralls is required.
+The badge and summary card track the latest successful `main` measurement. Metrics are generated from the Clover report produced by the existing CI quality job, so no additional test run or external reporting service is required.
 
-After a successful trusted `main` CI run, a separate presentation workflow renders
-`coverage.svg`, `coverage-summary.svg` and `coverage.json` and publishes only those
-presentation assets to the dedicated `coverage-badges` branch. Because the package
-repository is public, the README can render those raw branch assets directly. This
-keeps generated coverage commits out of `main`, avoids CI loops, and remains
-independent of future `main` branch-protection rules. Raw Clover and HTML reports
-remain available as workflow artifacts for 30 days.
+After a successful trusted `main` CI run, a separate presentation workflow renders `coverage.svg`, `coverage-summary.svg` and `coverage.json` and publishes only those assets to the dedicated `coverage-badges` branch. Raw Clover and HTML reports remain available as workflow artifacts for 30 days.
 
 ```text
 src/                    Core source (FiscalIdentifiers\)
 tests/                  Pest test suite
+docs/jurisdictions/     Jurisdiction-specific semantics and sources
 .github/workflows/      CI checks and coverage presentation
 composer.json           Package metadata, autoloading and development commands
 phpstan.neon            Static analysis configuration
@@ -217,7 +268,6 @@ phpunit.xml             Test suite and coverage source configuration
 
 ## Contributing, security and license
 
-Read [CONTRIBUTING.md](CONTRIBUTING.md) for setup, fixture conventions, coverage and
-dependency policy. Report vulnerabilities as described in [SECURITY.md](SECURITY.md).
-The package uses the [MIT license](LICENSE). Release notes will be published through
-[GitHub Releases](https://github.com/luiscoutinh/fiscal-identifiers/releases).
+Read [CONTRIBUTING.md](CONTRIBUTING.md) for setup, fixture conventions, coverage and dependency policy. Report vulnerabilities as described in [SECURITY.md](SECURITY.md).
+
+The package uses the [MIT license](LICENSE). Release notes will be published through [GitHub Releases](https://github.com/luiscoutinh/fiscal-identifiers/releases).
