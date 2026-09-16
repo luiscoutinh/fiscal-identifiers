@@ -47,6 +47,7 @@ final readonly class FiscalIdentifierValidator
         string $countryCode,
         string $value,
         IdentifierSubject|string $subject,
+        IdentifierCategory|string|null $category = null,
     ): ValidationResult {
         [$countryCode, $country] = $this->country($countryCode);
 
@@ -55,10 +56,11 @@ final readonly class FiscalIdentifierValidator
         }
 
         $definition = $country->identifierForSubject($subject);
+        $category = is_string($category) ? IdentifierCategory::from($category) : $category;
 
         return $definition === null
             ? $this->unsupported($countryCode, $value)
-            : $this->validateDefinition($countryCode, $value, $definition);
+            : $this->validateDefinition($countryCode, $value, $definition, $category);
     }
 
     /** @return array{string, CountryDefinition|null} */
@@ -90,11 +92,13 @@ final readonly class FiscalIdentifierValidator
         string $countryCode,
         string $value,
         IdentifierDefinition $definition,
+        ?IdentifierCategory $requiredCategory = null,
     ): ValidationResult {
         $normalized = $definition->normalizer->normalize($value);
         $steps = [
             'normalization' => new ValidationStepResult(ValidationStatus::Passed),
         ];
+        $metadata = [];
 
         if (!$definition->formatValidator->validate($normalized)) {
             $steps['format'] = new ValidationStepResult(ValidationStatus::Failed);
@@ -104,11 +108,54 @@ final readonly class FiscalIdentifierValidator
 
         $steps['format'] = new ValidationStepResult(ValidationStatus::Passed);
 
+        if ($definition->categoryResolver !== null) {
+            $resolvedCategory = $definition->categoryResolver->resolve($normalized);
+
+            if ($resolvedCategory !== null) {
+                $metadata['category'] = $resolvedCategory->value;
+            }
+
+            if ($requiredCategory !== null) {
+                if ($resolvedCategory === null || !$resolvedCategory->equals($requiredCategory)) {
+                    $steps['category'] = new ValidationStepResult(ValidationStatus::Failed);
+
+                    return new ValidationResult(
+                        $countryCode,
+                        $value,
+                        $normalized,
+                        ValidationDecision::Rejected,
+                        $steps,
+                        $metadata,
+                    );
+                }
+
+                $steps['category'] = new ValidationStepResult(ValidationStatus::Passed);
+            }
+        } elseif ($requiredCategory !== null) {
+            $steps['category'] = new ValidationStepResult(ValidationStatus::NotSupported);
+
+            return new ValidationResult(
+                $countryCode,
+                $value,
+                $normalized,
+                ValidationDecision::NotSupported,
+                $steps,
+                $metadata,
+            );
+        }
+
         if ($definition->checksumValidator !== null) {
             if (!$definition->checksumValidator->validate($normalized)) {
                 $steps['checksum'] = new ValidationStepResult(ValidationStatus::Failed);
 
-                return new ValidationResult($countryCode, $value, $normalized, ValidationDecision::Rejected, $steps);
+                return new ValidationResult(
+                    $countryCode,
+                    $value,
+                    $normalized,
+                    ValidationDecision::Rejected,
+                    $steps,
+                    $metadata,
+                );
             }
 
             $steps['checksum'] = new ValidationStepResult(ValidationStatus::Passed);
@@ -122,6 +169,7 @@ final readonly class FiscalIdentifierValidator
             $normalized,
             ValidationDecision::Accepted,
             $steps,
+            $metadata,
         );
     }
 
