@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace FiscalIdentifiers\Definitions;
 
-use FiscalIdentifiers\Enums\IdentifierType;
+use FiscalIdentifiers\IdentifierType;
 use InvalidArgumentException;
 use Symfony\Component\Intl\Countries;
 
