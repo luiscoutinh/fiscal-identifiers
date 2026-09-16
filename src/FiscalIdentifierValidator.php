@@ -10,6 +10,8 @@ use FiscalIdentifiers\Enums\ValidationStatus;
 use FiscalIdentifiers\Registry\CountryRegistry;
 use FiscalIdentifiers\Results\ValidationResult;
 use FiscalIdentifiers\Results\ValidationStepResult;
+use InvalidArgumentException;
+use Symfony\Component\Intl\Countries;
 
 final readonly class FiscalIdentifierValidator
 {
@@ -17,23 +19,27 @@ final readonly class FiscalIdentifierValidator
     {
     }
 
-    public function validate(string $countryCode, string $value, IdentifierType $type = IdentifierType::Vat): ValidationResult
-    {
-        $countryCode = strtoupper($countryCode);
+    public function validate(
+        string $countryCode,
+        string $value,
+        IdentifierType|string|null $type = null,
+    ): ValidationResult {
+        $countryCode = strtoupper(trim($countryCode));
+
+        if (!Countries::exists($countryCode)) {
+            throw new InvalidArgumentException("Unknown ISO 3166-1 alpha-2 country code: {$countryCode}");
+        }
+
         $country = $this->countries->get($countryCode);
-        $definition = $country?->identifier($type);
+
+        if ($country === null) {
+            return $this->unsupported($countryCode, $value);
+        }
+
+        $definition = $country->identifier($type);
 
         if ($definition === null) {
-            return new ValidationResult(
-                $countryCode,
-                $value,
-                trim($value),
-                ValidationDecision::Accepted,
-                [
-                    'format' => new ValidationStepResult(ValidationStatus::NotSupported),
-                    'checksum' => new ValidationStepResult(ValidationStatus::NotSupported),
-                ],
-            );
+            return $this->unsupported($countryCode, $value);
         }
 
         $normalized = $definition->normalizer->normalize($value);
@@ -67,6 +73,20 @@ final readonly class FiscalIdentifierValidator
             $normalized,
             ValidationDecision::Accepted,
             $steps,
+        );
+    }
+
+    private function unsupported(string $countryCode, string $value): ValidationResult
+    {
+        return new ValidationResult(
+            $countryCode,
+            $value,
+            trim($value),
+            ValidationDecision::NotSupported,
+            [
+                'format' => new ValidationStepResult(ValidationStatus::NotSupported),
+                'checksum' => new ValidationStepResult(ValidationStatus::NotSupported),
+            ],
         );
     }
 }
