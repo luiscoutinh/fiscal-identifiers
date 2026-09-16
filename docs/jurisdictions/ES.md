@@ -30,7 +30,7 @@ so `validate('ES', $value)` resolves to `entity_nif`.
 
 ## Optional entity category restriction
 
-The initial letter of an Spanish entity NIF identifies the official legal-form/entity category. The package exposes that code as result metadata and lets callers optionally require a specific category while keeping `entity_nif` as the identifier scheme.
+The initial letter of a Spanish entity NIF identifies the official legal-form/entity category. The package exposes that code as result metadata and lets callers optionally require a specific category while keeping `entity_nif` as the identifier scheme.
 
 Any supported entity category:
 
