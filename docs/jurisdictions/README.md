@@ -9,12 +9,15 @@ Each jurisdiction document describes the fiscal identifier schemes currently imp
 | Spain (`ES`) | [ES.md](ES.md) | `dni_nif`, `nie`, `entity_nif` |
 | Germany (`DE`) | [DE.md](DE.md) | `idnr`, `widnr`, `ust_idnr`, `steuernummer` |
 | United Kingdom (`GB`) | [GB.md](GB.md) | `utr`, `vat_registration_number` |
+| France (`FR`) | [FR.md](FR.md) | `numero_fiscal`, `siren`, `vat_number` |
 
 ## Scope
 
 The package currently focuses on identifiers whose primary purpose is tax identification or tax registration. The intended core scope includes taxpayer identifiers, VAT/GST identifiers and comparable jurisdiction-specific fiscal identifiers.
 
 Identifiers whose primary purpose is corporate registration, payroll/employer administration, social security, customs or another administrative domain are deliberately deferred even when they interact with tax processes. They should only be added later through an explicit scope decision rather than because they are adjacent to fiscal administration.
+
+A jurisdiction may still use a multi-purpose identifier as its official TIN. France is one example: OECD documentation identifies SIREN as the entity TIN even though INSEE also uses it as a general legal-unit identifier. Such cases should be documented explicitly rather than treated as a general exception for company-register identifiers.
 
 ## Documentation contract
 
