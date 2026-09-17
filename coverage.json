@@ -1,18 +1,18 @@
 {
   "lines": {
     "percent": 100.0,
-    "covered": 385,
-    "total": 385
+    "covered": 377,
+    "total": 377
   },
   "methods": {
     "percent": 100.0,
-    "covered": 50,
-    "total": 50
+    "covered": 49,
+    "total": 49
   },
   "classes": {
     "percent": 100.0,
-    "covered": 30,
-    "total": 30
+    "covered": 29,
+    "total": 29
   },
   "scope": "src/",
   "driver": "PCOV"
