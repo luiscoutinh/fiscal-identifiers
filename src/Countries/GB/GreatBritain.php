@@ -15,7 +15,6 @@ final class GreatBritain
     {
         $utr = IdentifierType::from('utr');
         $vatRegistrationNumber = IdentifierType::from('vat_registration_number');
-        $employerPayeReference = IdentifierType::from('employer_paye_reference');
 
         return new CountryDefinition(
             'GB',
@@ -29,11 +28,6 @@ final class GreatBritain
                     type: $vatRegistrationNumber,
                     normalizer: new GreatBritainVatRegistrationNumberNormalizer(),
                     formatValidator: new RegexValidator('/^\d{9}$/'),
-                ),
-                $employerPayeReference->value => new IdentifierDefinition(
-                    type: $employerPayeReference,
-                    normalizer: new GreatBritainEmployerPayeReferenceNormalizer(),
-                    formatValidator: new RegexValidator('/^\d{3}\/[A-Z0-9]{1,10}$/'),
                 ),
             ],
             subjectIdentifierTypes: [

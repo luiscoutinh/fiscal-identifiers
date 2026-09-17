@@ -24,7 +24,27 @@ country
 - **Identifier type** is the concrete fiscal scheme, such as `nif`, `cnpj`, `nie`, `ust_idnr` or `utr`.
 - **Category** is an optional jurisdiction-specific subdivision encoded inside an identifier, such as the Spanish entity-class letter `B`.
 
-Subjects are a convenience layer. They do not replace identifier types. A country may map `company` to one general identifier while still exposing additional purpose-specific identifiers explicitly.
+Subjects are a convenience layer. They do not replace identifier types. A country may map `company` to one general identifier while still exposing additional purpose-specific fiscal identifiers explicitly.
+
+## Scope: fiscal identifiers only
+
+The current package scope is deliberately narrow: identifiers whose primary purpose is **tax identification or tax registration**.
+
+Included now:
+
+- taxpayer identifiers / TIN-equivalent schemes;
+- VAT or GST registration identifiers;
+- comparable jurisdiction-specific tax identifiers.
+
+Deferred for now:
+
+- company or business-register numbers;
+- employer/payroll references;
+- social-security identifiers;
+- customs identifiers;
+- other administrative identifiers whose primary purpose is not fiscal identification.
+
+Those adjacent identifiers can be useful, but adding them by default would turn this into a generic business-identifier library. A future expansion should therefore be an explicit product decision rather than an incidental consequence of adding a jurisdiction.
 
 ## Supported jurisdictions
 
@@ -33,8 +53,8 @@ Subjects are a convenience layer. They do not replace identifier types. A countr
 | **Portugal (`PT`)** | `person -> nif`, `company -> nipc` | `nif`, `nipc` | Both use the Portuguese nine-digit local format/checksum. |
 | **Brazil (`BR`)** | `person -> cpf`, `company -> cnpj` | `cpf`, `cnpj` | CNPJ supports both numeric and current alphanumeric forms. |
 | **Spain (`ES`)** | `company -> entity_nif`; generic `person` is intentionally ambiguous | `dni_nif`, `nie`, `entity_nif` | Entity NIF exposes the official entity-class letter as an optional category. |
-| **Germany (`DE`)** | `person -> idnr`, `company -> widnr` | `idnr`, `widnr`, `ust_idnr`, `steuernummer` | One company can have several identifiers with different purposes. |
-| **United Kingdom (`GB`)** | `person -> utr`, `company -> utr` | `utr`, `vat_registration_number`, `employer_paye_reference` | Companies House company numbers are intentionally kept outside fiscal-identifier validation. |
+| **Germany (`DE`)** | `person -> idnr`, `company -> widnr` | `idnr`, `widnr`, `ust_idnr`, `steuernummer` | One company can have several fiscal identifiers with different purposes. |
+| **United Kingdom (`GB`)** | `person -> utr`, `company -> utr` | `utr`, `vat_registration_number` | PAYE and Companies House identifiers are intentionally outside the current fiscal-only scope. |
 
 Detailed jurisdiction notes and authoritative sources live under [`docs/jurisdictions`](docs/jurisdictions/README.md).
 
@@ -93,7 +113,7 @@ $validator->validateFor('PT', $value, 'person');  // nif
 $validator->validateFor('PT', $value, 'company'); // nipc
 ```
 
-For the United Kingdom, both `person` and `company` resolve to the general HMRC `utr` scheme when a UTR exists. Purpose-specific references such as VAT registration and employer PAYE remain explicit identifier types.
+For the United Kingdom, both `person` and `company` resolve to the general HMRC `utr` scheme when a UTR exists. VAT registration remains an explicit purpose-specific fiscal identifier.
 
 Spain deliberately does **not** map generic `person` to one identifier type because natural persons may use different schemes such as DNI-based NIF or NIE. In that situation, callers must choose the identifier type explicitly.
 
@@ -153,7 +173,7 @@ $validator->validate('DE', $widnr);  // company -> widnr
 $validator->validate('GB', $utr);    // company -> utr
 ```
 
-The default subject is only a resolution convenience. It does not stop callers from explicitly requesting another identifier type:
+The default subject is only a resolution convenience. It does not stop callers from explicitly requesting another fiscal identifier type:
 
 ```php
 $validator->validate('DE', $vatNumber, 'ust_idnr');
@@ -222,8 +242,8 @@ Likewise, VIES is not a generic fiscal-identifier validator. It answers a narrow
 | **TIN — Tax Identification Number** | Identifier used by a jurisdiction to identify taxpayers; structures differ by jurisdiction and subject. |
 | **VAT number / VAT identification number** | Identifies a VAT registration. It may reuse, extend or differ from another domestic identifier. |
 | **GST identifier** | Identifier for goods and services tax in jurisdictions using that system. |
-| **Business/company registration number** | Identifies a legal entity in a business register; it is not universally the same as a tax identifier. |
-| **Employer, payroll, social security or customs identifier** | Administrative identifiers that may overlap with tax processes but remain distinct schemes. |
+| **Business/company registration number** | Identifies a legal entity in a business register; outside the current package scope unless it also serves as the jurisdiction's fiscal identifier. |
+| **Employer, payroll, social security or customs identifier** | Administrative identifiers that can interact with tax processes but are outside the current fiscal-only scope. |
 
 One person or organization can therefore have several identifiers at the same time. Always retain the jurisdiction, identifier type and intended use alongside the value.
 
