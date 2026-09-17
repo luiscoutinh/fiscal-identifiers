@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 use FiscalIdentifiers\Configuration\IdentifierResolutionConfiguration;
 use FiscalIdentifiers\Countries\GB\GreatBritain;
-use FiscalIdentifiers\Countries\GB\GreatBritainEmployerPayeReferenceNormalizer;
 use FiscalIdentifiers\Countries\GB\GreatBritainUtrNormalizer;
 use FiscalIdentifiers\Countries\GB\GreatBritainVatRegistrationNumberNormalizer;
 use FiscalIdentifiers\Enums\ValidationStatus;
@@ -61,27 +60,25 @@ test('validates a standard UK VAT registration number structurally', function ()
         ->and($result->steps['checksum']->status)->toBe(ValidationStatus::NotSupported);
 });
 
-test('validates an employer PAYE reference structurally', function (): void {
-    $result = greatBritainValidator()->validate('GB', ' 123 / ab456 ', 'employer_paye_reference');
+test('keeps employer PAYE references outside the current fiscal identifier scope', function (): void {
+    $result = greatBritainValidator()->validate('GB', '123/AB456', 'employer_paye_reference');
 
-    expect($result->normalized)->toBe('123/AB456')
-        ->and($result->isAccepted())->toBeTrue()
+    expect($result->isSupported())->toBeFalse()
+        ->and($result->isAccepted())->toBeFalse()
+        ->and($result->steps['format']->status)->toBe(ValidationStatus::NotSupported)
         ->and($result->steps['checksum']->status)->toBe(ValidationStatus::NotSupported);
 });
 
-test('rejects malformed Great Britain identifiers', function (): void {
+test('rejects malformed Great Britain fiscal identifiers', function (): void {
     $utr = greatBritainValidator()->validate('GB', '123456789', 'utr');
     $vat = greatBritainValidator()->validate('GB', 'GB12345678', 'vat_registration_number');
-    $paye = greatBritainValidator()->validate('GB', '12/AB456', 'employer_paye_reference');
 
     expect($utr->steps['format']->status)->toBe(ValidationStatus::Failed)
-        ->and($vat->steps['format']->status)->toBe(ValidationStatus::Failed)
-        ->and($paye->steps['format']->status)->toBe(ValidationStatus::Failed);
+        ->and($vat->steps['format']->status)->toBe(ValidationStatus::Failed);
 });
 
-test('normalizes Great Britain identifier presentation forms', function (): void {
+test('normalizes Great Britain fiscal identifier presentation forms', function (): void {
     expect((new GreatBritainUtrNormalizer())->normalize(' 12345 67890 '))->toBe('1234567890')
         ->and((new GreatBritainVatRegistrationNumberNormalizer())->normalize(' gb 123 456 789 '))->toBe('123456789')
-        ->and((new GreatBritainVatRegistrationNumberNormalizer())->normalize('123456789'))->toBe('123456789')
-        ->and((new GreatBritainEmployerPayeReferenceNormalizer())->normalize(' 123 / ab456 '))->toBe('123/AB456');
+        ->and((new GreatBritainVatRegistrationNumberNormalizer())->normalize('123456789'))->toBe('123456789');
 });
